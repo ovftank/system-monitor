@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+@theme {
+    --color-crimson-50: #fef2f2;
+    --color-crimson-100: #fee2e2;
+    --color-crimson-200: #fecaca;
+    --color-crimson-300: #fca5a5;
+    --color-crimson-400: #f87171;
+    --color-crimson-500: #ef4444;
+    --color-crimson-600: #dc2626;
+    --color-crimson-700: #b91c1c;
+    --color-crimson-800: #991b1b;
+    --color-crimson-900: #7f1d1d;
+
+    --color-stone-50: #fafaf9;
+    --color-stone-100: #f5f5f4;
+    --color-stone-200: #e7e5e4;
+    --color-stone-300: #d6d3d1;
+    --color-stone-400: #a8a29e;
+    --color-stone-500: #78716c;
+    --color-stone-600: #57534e;
+    --color-stone-700: #44403c;
+    --color-stone-800: #292524;
+    --color-stone-900: #1c1917;
+}
+
+@layer base {
+    :root {
+        @apply select-none;
+        scroll-behavior: smooth;
+        text-rendering: optimizeLegibility;
+    }
+    html {
+        @apply h-full overflow-hidden;
+    }
+    body {
+        --default-contextmenu: hide;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            color-scheme: light;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        :root {
+            color-scheme: light;
+        }
+    }
+
+    button,
+    label,
+    summary,
+    [role='button'] {
+        @apply cursor-pointer select-none;
+    }
+
+    input[type='checkbox'],
+    input[type='radio'] {
+        @apply appearance-auto;
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        @apply appearance-none;
+    }
+
+    input[type='number'] {
+        @apply appearance-none;
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+
+    img,
+    video,
+    canvas,
+    svg {
+        @apply block h-auto max-w-full;
+    }
+
+    img {
+        @apply pointer-events-none select-none;
+    }
+
+    a {
+        @apply no-underline;
+    }
+
+    textarea {
+        @apply resize-none;
+    }
+}

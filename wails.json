@@ -1,0 +1,28 @@
+{
+	"$schema": "https://wails.io/schemas/config.v2.json",
+	"author": {
+		"email": "admin@ovfteam.com",
+		"name": "ovfteam"
+	},
+	"build:dir": "build",
+	"frontend:build": "pnpm build",
+	"frontend:dev:build": "pnpm vite build --mode development",
+	"frontend:dev:serverUrl": "auto",
+	"frontend:dev:watcher": "pnpm vite",
+	"frontend:install": "pnpm install",
+	"garbleargs": "-literals -tiny -seed=random",
+	"info": {
+		"comments": "https://ovfteam.com",
+		"companyName": "ovfteam",
+		"copyright": "Copyright © 2025 ovfteam",
+		"productName": "System Monitor",
+		"productVersion": "0.0.1"
+	},
+	"name": "system-monitor",
+	"nsisType": "single",
+	"obfuscated": true,
+	"outputfilename": "system-monitor",
+	"windows": {
+		"webview2": "embed"
+	}
+}
