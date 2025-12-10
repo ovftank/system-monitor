@@ -1,4 +1,6 @@
- using System.Management;
+using System.Management;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using LibreHardwareMonitor.Hardware;
 
@@ -9,7 +11,8 @@ namespace sppc.Services
         private readonly Computer _computer;
         private bool _disposed = false;
         private bool? _vtCachedStatus = null;
-        private static readonly string _cachedHostName = Environment.MachineName;
+        private static readonly string _cachedHostName = GetHostName();
+        private static readonly string _cachedLocalIP = GetLanIP();
 
         public HardwareMonitorService()
         {
@@ -44,6 +47,7 @@ namespace sppc.Services
             return new HardwareResponse
             {
                 HostName = _cachedHostName,
+                LocalIP = _cachedLocalIP,
                 Hardware = hardwareInfoList
             };
         }
@@ -197,6 +201,100 @@ namespace sppc.Services
             return _vtCachedStatus.Value;
         }
 
+        private static string GetLanIP()
+        {
+            try
+            {
+                var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+
+                foreach (var intf in interfaces)
+                {
+                    if (intf.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up ||
+                        intf.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback ||
+                        intf.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
+                    {
+                        continue;
+                    }
+
+                    var ipProps = intf.GetIPProperties();
+
+                    if (ipProps.GatewayAddresses.Count > 0)
+                    {
+                        var unicastIPs = ipProps.UnicastAddresses
+                            .Where(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork &&
+                                        !IsSpecialIP(ua.Address.ToString()))
+                            .ToList();
+
+                        if (unicastIPs.Count > 0)
+                        {
+                            return unicastIPs[0].Address.ToString();
+                        }
+                    }
+                }
+
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                var primaryIP = host.AddressList
+                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork &&
+                               !IPAddress.IsLoopback(ip) &&
+                               !IsSpecialIP(ip.ToString()))
+                    .Select(ip => ip.ToString())
+                    .FirstOrDefault();
+
+                if (!string.IsNullOrEmpty(primaryIP))
+                {
+                    return primaryIP;
+                }
+
+                return "127.0.0.1";
+            }
+            catch
+            {
+                return "127.0.0.1";
+            }
+        }
+
+        private static bool IsSpecialIP(string ip)
+        {
+            return ip.StartsWith("169.254.") ||
+                   ip.StartsWith("127.") ||
+                   ip.StartsWith("0.") ||
+                   ip.StartsWith("224.") ||
+                   ip.StartsWith("240.");
+        }
+
+        private static string GetHostName()
+        {
+            try
+            {
+                var primaryIP = GetLanIP();
+                if (!string.IsNullOrEmpty(primaryIP) && primaryIP != "127.0.0.1")
+                {
+                    try
+                    {
+                        var hostEntry = Dns.GetHostEntry(primaryIP);
+                        if (hostEntry.HostName != null && hostEntry.HostName != primaryIP)
+                        {
+                            var hostname = hostEntry.HostName.Split('.')[0];
+                            if (!string.IsNullOrWhiteSpace(hostname) && hostname != "localhost")
+                            {
+                                return hostname;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // con-meo-bu
+                    }
+                }
+
+                return Environment.MachineName;
+            }
+            catch
+            {
+                return Environment.MachineName;
+            }
+        }
+
     }
 
     [JsonSerializable(typeof(List<HardwareInfo>))]
@@ -211,6 +309,7 @@ namespace sppc.Services
     public class HardwareResponse
     {
         public string HostName { get; set; } = Environment.MachineName;
+        public string LocalIP { get; set; } = "";
         public List<HardwareInfo> Hardware { get; set; } = [];
     }
 

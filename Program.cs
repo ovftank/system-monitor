@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using sppc.Services;
 
 try
@@ -8,51 +10,53 @@ try
         startupService.EnableStartup();
     }
 
-    await StartHttpServer(args);
+    await StartDataSender();
 }
 catch
 {
     throw new InvalidOperationException("Failed to start the application");
 }
 
-static async Task StartHttpServer(string[] args)
+static async Task StartDataSender()
 {
-    var builder = WebApplication.CreateBuilder(args);
+    var configService = new ConfigService();
+    var serverUrl = $"http://{configService.ServerIP}:6886/api/monitor";
 
-    builder.WebHost.ConfigureKestrel(options =>
+    using var httpClient = new HttpClient();
+    using var hardwareMonitorService = new HardwareMonitorService();
+
+    var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (sender, e) =>
     {
-        options.Listen(System.Net.IPAddress.Any, 6886);
-    });
+        e.Cancel = true;
+        cts.Cancel();
+    };
 
-    builder.Services.AddSingleton<HardwareMonitorService>();
-
-    var app = builder.Build();
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseDeveloperExceptionPage();
-    }
-    app.UseRouting();
-
-    app.MapGet("/", (HardwareMonitorService hardwareMonitorService) =>
+    while (!cts.Token.IsCancellationRequested)
     {
         try
         {
             var hardwareInfo = hardwareMonitorService.GetHardwareInfo();
-            return Results.Json(hardwareInfo, HardwareInfoContext.Default.HardwareResponse);
+            var json = JsonSerializer.Serialize(hardwareInfo, HardwareInfoContext.Default.HardwareResponse);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            await httpClient.PostAsync(serverUrl, content, cts.Token);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return Results.Problem(detail: ex.ToString(), statusCode: 500);
+            break;
         }
-    });
+        catch
+        {
+            // con-meo-bu
+        }
 
-    try
-    {
-        await app.RunAsync();
-    }
-    catch
-    {
-        throw new InvalidOperationException("HTTP server encountered a fatal error");
+        try
+        {
+            await Task.Delay(configService.DelayMs, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            break;
+        }
     }
 }
