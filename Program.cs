@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using SystemMonitorServer;
 
 try
@@ -39,9 +38,9 @@ var app = builder.Build();
 
 var clientsData = new ConcurrentDictionary<string, ClientInfo>();
 
-app.MapPost("/api/monitor", (Dictionary<string, JsonElement>? data) =>
+app.MapPost("/api/monitor", (HardwareResponse? data) =>
 {
-    if (data is null)
+    if (data is null || string.IsNullOrWhiteSpace(data.HostName))
     {
         return Results.StatusCode(400);
     }
@@ -67,15 +66,12 @@ app.MapPost("/api/monitor", (Dictionary<string, JsonElement>? data) =>
     }
 });
 
-static string GenerateClientId(Dictionary<string, JsonElement> data)
+static string GenerateClientId(HardwareResponse data)
 {
-    data.TryGetValue("LocalIP", out var localIpObj);
-    data.TryGetValue("HostName", out var hostnameObj);
+    var hostname = string.IsNullOrWhiteSpace(data.HostName) ? "unknown" : data.HostName;
+    var localIp = data.LocalIP;
 
-    var hostname = hostnameObj.ValueKind == JsonValueKind.Undefined ? "unknown" : hostnameObj.GetString() ?? "unknown";
-    var localIp = localIpObj.ValueKind == JsonValueKind.Undefined ? null : localIpObj.GetString();
-
-    return localIp != null ? $"{hostname}_{localIp}" : hostname;
+    return !string.IsNullOrWhiteSpace(localIp) ? $"{hostname}_{localIp}" : hostname;
 }
 
 app.MapGet("/api/monitor", () =>
@@ -88,7 +84,8 @@ app.MapGet("/api/monitor", () =>
             clientDataList.Add(new ClientData
             {
                 ClientId = clientInfo.ClientId,
-                Data = clientInfo.Data
+                Data = clientInfo.Data,
+                LastUpdated = clientInfo.LastUpdated
             });
         }
 

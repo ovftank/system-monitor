@@ -4,7 +4,7 @@ namespace SystemMonitorServer
 {
     public class StartupService
     {
-        private readonly string _appName = "SPPC System Monitor Server - https://ovfteam.com/";
+        private readonly string _appName = "SuperPC System Monitor Server - https://ovfteam.com/";
         private readonly string _executablePath;
 
         public StartupService()
