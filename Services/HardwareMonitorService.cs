@@ -1,5 +1,5 @@
-using System.Management;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using LibreHardwareMonitor.Hardware;
@@ -22,11 +22,11 @@ namespace sppc.Services
                 IsGpuEnabled = true,
                 IsMemoryEnabled = true,
                 IsMotherboardEnabled = true,
-                IsControllerEnabled = true,
+                IsControllerEnabled = false,
                 IsNetworkEnabled = true,
-                IsStorageEnabled = true,
-                IsBatteryEnabled = true,
-                IsPsuEnabled = true
+                IsStorageEnabled = false,
+                IsBatteryEnabled = false,
+                IsPsuEnabled = false
             };
 
             _computer.Open();
@@ -40,6 +40,11 @@ namespace sppc.Services
 
             foreach (IHardware hardware in _computer.Hardware)
             {
+                if (hardware.HardwareType == HardwareType.Network && !IsPhysicalNetworkAdapter(hardware))
+                {
+                    continue;
+                }
+
                 var hardwareInfo = CreateHardwareInfo(hardware);
                 hardwareInfoList.Add(hardwareInfo);
             }
@@ -48,6 +53,7 @@ namespace sppc.Services
             {
                 HostName = _cachedHostName,
                 LocalIP = _cachedLocalIP,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Hardware = hardwareInfoList
             };
         }
@@ -61,11 +67,232 @@ namespace sppc.Services
                 Sensors = []
             };
 
-            AddVTStatusIfNeeded(hardwareInfo, hardware);
-            AddSensors(hardwareInfo, hardware.Sensors);
+            if (hardware.HardwareType == HardwareType.Cpu)
+            {
+                AddAveragedCpuSensors(hardwareInfo, hardware.Sensors);
+                AddVTStatusIfNeeded(hardwareInfo, hardware);
+            }
+            else if (hardware.HardwareType == HardwareType.GpuNvidia ||
+                     hardware.HardwareType == HardwareType.GpuAmd ||
+                     hardware.HardwareType == HardwareType.GpuIntel)
+            {
+                AddAveragedGpuSensors(hardwareInfo, hardware.Sensors);
+            }
+            else if (hardware.HardwareType == HardwareType.Memory)
+            {
+                AddMemorySensors(hardwareInfo, hardware.Sensors);
+            }
+            else if (hardware.HardwareType == HardwareType.Network)
+            {
+                AddNetworkSensors(hardwareInfo, hardware.Sensors);
+            }
+            else
+            {
+                AddSensors(hardwareInfo, hardware.Sensors);
+            }
+
+            AddMemorySpeedIfNeeded(hardwareInfo, hardware);
+            AddNetworkSpeedIfNeeded(hardwareInfo, hardware);
             AddSubHardwareSensors(hardwareInfo, hardware.SubHardware);
 
             return hardwareInfo;
+        }
+
+        private static void AddAveragedCpuSensors(HardwareInfo hardwareInfo, IEnumerable<ISensor> sensors)
+        {
+            var sensorsList = sensors.ToList();
+
+            var loads = sensorsList
+                .Where(s => s.SensorType == SensorType.Load && s.Value.HasValue && s.Name.Contains("CPU Total", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (loads.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "CPU Usage",
+                    SensorType = "Load",
+                    Value = Math.Round(loads.Average(), 2),
+                    Unit = "%"
+                });
+            }
+
+            var temps = sensorsList
+                .Where(s => s.SensorType == SensorType.Temperature && s.Value.HasValue &&
+                           (s.Name.Contains("Core Average", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("CPU Package", StringComparison.OrdinalIgnoreCase)))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (temps.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "CPU Temperature",
+                    SensorType = "Temperature",
+                    Value = Math.Round(temps.Average(), 2),
+                    Unit = "°C"
+                });
+            }
+
+            var clocks = sensorsList
+                .Where(s => s.SensorType == SensorType.Clock && s.Value.HasValue &&
+                           !s.Name.Contains("Bus Speed", StringComparison.OrdinalIgnoreCase) &&
+                           s.Name.Contains("CPU Core", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (clocks.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "CPU Clock",
+                    SensorType = "Clock",
+                    Value = Math.Round(clocks.Average(), 2),
+                    Unit = "MHz"
+                });
+            }
+
+            var powers = sensorsList
+                .Where(s => s.SensorType == SensorType.Power && s.Value.HasValue &&
+                           s.Name.Contains("CPU Package", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (powers.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "CPU Power",
+                    SensorType = "Power",
+                    Value = Math.Round(powers[0], 2),
+                    Unit = "W"
+                });
+            }
+        }
+
+        private static void AddAveragedGpuSensors(HardwareInfo hardwareInfo, IEnumerable<ISensor> sensors)
+        {
+            var sensorsList = sensors.ToList();
+
+            var loads = sensorsList
+                .Where(s => s.SensorType == SensorType.Load && s.Value.HasValue &&
+                           (s.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("D3D 3D", StringComparison.OrdinalIgnoreCase)))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (loads.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "GPU Usage",
+                    SensorType = "Load",
+                    Value = Math.Round(loads.Average(), 2),
+                    Unit = "%"
+                });
+            }
+
+            var temps = sensorsList
+                .Where(s => s.SensorType == SensorType.Temperature && s.Value.HasValue &&
+                           s.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (temps.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "GPU Temperature",
+                    SensorType = "Temperature",
+                    Value = Math.Round(temps.Average(), 2),
+                    Unit = "°C"
+                });
+            }
+
+            var clocks = sensorsList
+                .Where(s => s.SensorType == SensorType.Clock && s.Value.HasValue &&
+                           s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (clocks.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "GPU Clock",
+                    SensorType = "Clock",
+                    Value = Math.Round(clocks.Average(), 2),
+                    Unit = "MHz"
+                });
+            }
+
+            var powers = sensorsList
+                .Where(s => s.SensorType == SensorType.Power && s.Value.HasValue &&
+                           s.Name.Contains("GPU Power", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (powers.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "GPU Power",
+                    SensorType = "Power",
+                    Value = Math.Round(powers[0], 2),
+                    Unit = "W"
+                });
+            }
+        }
+
+        private static void AddMemorySensors(HardwareInfo hardwareInfo, IEnumerable<ISensor> sensors)
+        {
+            var sensorsList = sensors.ToList();
+
+            var memoryUsed = sensorsList
+                .FirstOrDefault(s => s.SensorType == SensorType.Data &&
+                                    s.Name.Equals("Memory Used", StringComparison.OrdinalIgnoreCase));
+
+            if (memoryUsed?.Value.HasValue == true)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "Memory Used",
+                    SensorType = "Data",
+                    Value = Math.Round(memoryUsed.Value.Value, 2),
+                    Unit = "GB"
+                });
+            }
+
+            var memoryAvailable = sensorsList
+                .FirstOrDefault(s => s.SensorType == SensorType.Data &&
+                                    s.Name.Equals("Memory Available", StringComparison.OrdinalIgnoreCase));
+
+            if (memoryAvailable?.Value.HasValue == true)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "Memory Available",
+                    SensorType = "Data",
+                    Value = Math.Round(memoryAvailable.Value.Value, 2),
+                    Unit = "GB"
+                });
+            }
+
+            if (memoryUsed?.Value.HasValue == true && memoryAvailable?.Value.HasValue == true)
+            {
+                var totalMemory = memoryUsed.Value.Value + memoryAvailable.Value.Value;
+                var usagePercent = (memoryUsed.Value.Value / totalMemory) * 100;
+
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "Memory Usage",
+                    SensorType = "Load",
+                    Value = Math.Round(usagePercent, 2),
+                    Unit = "%"
+                });
+            }
         }
 
         private void AddVTStatusIfNeeded(HardwareInfo hardwareInfo, IHardware hardware)
@@ -79,6 +306,116 @@ namespace sppc.Services
                 Value = IsVTEnabled() ? 1 : 0,
                 Unit = ""
             });
+        }
+
+        private void AddMemorySpeedIfNeeded(HardwareInfo hardwareInfo, IHardware hardware)
+        {
+            if (hardware.HardwareType != HardwareType.Memory) return;
+
+            try
+            {
+                if (_computer.SMBios?.MemoryDevices != null)
+                {
+                    foreach (var memory in _computer.SMBios.MemoryDevices)
+                    {
+                        var speed = memory.ConfiguredSpeed > 0 ? memory.ConfiguredSpeed : memory.Speed;
+
+                        if (speed > 0)
+                        {
+                            hardwareInfo.Sensors.Add(new SensorInfo
+                            {
+                                Name = "Memory Speed",
+                                SensorType = "Clock",
+                                Value = speed,
+                                Unit = "MHz"
+                            });
+                            return;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // con-meo-bu
+            }
+        }
+
+        private static bool IsPhysicalNetworkAdapter(IHardware hardware)
+        {
+            if (hardware.HardwareType != HardwareType.Network) return false;
+
+            if (hardware.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase) ||
+                hardware.Name.StartsWith("Local Area Connection*", StringComparison.OrdinalIgnoreCase) ||
+                hardware.Name.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase) ||
+                hardware.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase) ||
+                hardware.Name.Contains("VMware", StringComparison.OrdinalIgnoreCase) ||
+                hardware.Name.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            try
+            {
+                var networkInterface = NetworkInterface.GetAllNetworkInterfaces()
+                    .FirstOrDefault(ni => ni.Name.Equals(hardware.Name, StringComparison.OrdinalIgnoreCase));
+
+                return networkInterface?.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                       networkInterface?.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void AddNetworkSensors(HardwareInfo hardwareInfo, IEnumerable<ISensor> sensors)
+        {
+            foreach (ISensor sensor in sensors)
+            {
+                if (!sensor.Value.HasValue) continue;
+
+                if (sensor.SensorType == SensorType.Throughput)
+                {
+                    hardwareInfo.Sensors.Add(new SensorInfo
+                    {
+                        Name = sensor.Name,
+                        SensorType = sensor.SensorType.ToString(),
+                        Value = sensor.Value.Value,
+                        Unit = GetUnit(sensor.SensorType)
+                    });
+                }
+            }
+        }
+
+        private static void AddNetworkSpeedIfNeeded(HardwareInfo hardwareInfo, IHardware hardware)
+        {
+            if (hardware.HardwareType != HardwareType.Network) return;
+
+            try
+            {
+                var networkInterface = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(ni => ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                                 ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
+                    .FirstOrDefault(ni => ni.Name.Equals(hardware.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (networkInterface == null) return;
+
+                var speedMbps = networkInterface.Speed > 0
+                    ? networkInterface.Speed / 1_000_000.0
+                    : 0;
+
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "Link Speed",
+                    SensorType = "Data",
+                    Value = speedMbps,
+                    Unit = "Mbps"
+                });
+            }
+            catch
+            {
+                // con-meo-bu
+            }
         }
 
         private static void AddSensors(HardwareInfo hardwareInfo, IEnumerable<ISensor> sensors)
@@ -140,17 +477,9 @@ namespace sppc.Services
                 SensorType.Load => "%",
                 SensorType.Clock => "MHz",
                 SensorType.Fan => "RPM",
-                SensorType.Flow => "L/h",
-                SensorType.Control => "%",
-                SensorType.Level => "%",
                 SensorType.Power => "W",
                 SensorType.Data => "GB",
-                SensorType.Frequency => "Hz",
-                SensorType.Voltage => "V",
-                SensorType.Current => "A",
                 SensorType.Throughput => "B/s",
-                SensorType.Energy => "J",
-                SensorType.Factor => "",
                 _ => ""
             };
         }
@@ -182,22 +511,13 @@ namespace sppc.Services
 
             try
             {
-                var searcher = new ManagementObjectSearcher("select * from Win32_Processor");
-                var cpus = searcher.Get().GetEnumerator();
-
-                if (cpus.MoveNext())
-                {
-                    var cpu = (ManagementObject)cpus.Current;
-                    _vtCachedStatus = (bool)cpu["VirtualizationFirmwareEnabled"];
-                    return _vtCachedStatus.Value;
-                }
+                _vtCachedStatus = false;
             }
             catch
             {
                 _vtCachedStatus = false;
             }
 
-            _vtCachedStatus = false;
             return _vtCachedStatus.Value;
         }
 
@@ -310,6 +630,7 @@ namespace sppc.Services
     {
         public string HostName { get; set; } = Environment.MachineName;
         public string LocalIP { get; set; } = "";
+        public long Timestamp { get; set; }
         public List<HardwareInfo> Hardware { get; set; } = [];
     }
 
