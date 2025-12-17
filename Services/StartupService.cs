@@ -1,10 +1,10 @@
 using Microsoft.Win32;
 
-namespace sppc.Services
+namespace superpc.Services
 {
     public class StartupService
     {
-        private readonly string _appName = "SPPC System Monitor Client - https://ovfteam.com/";
+        private readonly string _appName = "SuperPC System Monitor Client - https://ovfteam.com/";
         private readonly string _executablePath;
 
         public StartupService()

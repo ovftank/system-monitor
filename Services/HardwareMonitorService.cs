@@ -1,10 +1,11 @@
+using System.Management;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using LibreHardwareMonitor.Hardware;
 
-namespace sppc.Services
+namespace superpc.Services
 {
     public class HardwareMonitorService : IDisposable
     {
@@ -242,6 +243,23 @@ namespace sppc.Services
                     SensorType = "Power",
                     Value = Math.Round(powers[0], 2),
                     Unit = "W"
+                });
+            }
+
+            var fans = sensorsList
+                .Where(s => s.SensorType == SensorType.Fan && s.Value.HasValue &&
+                           s.Name.Contains("GPU Fan", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            if (fans.Count > 0)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "GPU Fan",
+                    SensorType = "Fan",
+                    Value = Math.Round(fans[0], 2),
+                    Unit = "RPM"
                 });
             }
         }
@@ -511,6 +529,20 @@ namespace sppc.Services
 
             try
             {
+                using (var searcher = new ManagementObjectSearcher("SELECT VirtualizationFirmwareEnabled FROM Win32_Processor"))
+                using (var collection = searcher.Get())
+                {
+                    foreach (ManagementBaseObject obj in collection)
+                    {
+                        var vtEnabled = obj["VirtualizationFirmwareEnabled"];
+                        if (vtEnabled != null)
+                        {
+                            _vtCachedStatus = (bool)vtEnabled;
+                            return _vtCachedStatus.Value;
+                        }
+                    }
+                }
+
                 _vtCachedStatus = false;
             }
             catch

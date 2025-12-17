@@ -1,6 +1,6 @@
 using LibreHardwareMonitor.Hardware;
 
-namespace sppc
+namespace superpc
 {
     public class UpdateVisitor : IVisitor
     {

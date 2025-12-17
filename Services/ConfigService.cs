@@ -1,4 +1,4 @@
-namespace sppc.Services
+namespace superpc.Services
 {
     public class ConfigService
     {
@@ -44,7 +44,7 @@ namespace sppc.Services
         {
             try
             {
-                var defaultContent = $"# SPPC System Monitor\n# ip server\n{ServerIP}\n# delay (ms)\n1000\n";
+                var defaultContent = $"# SuperPC System Monitor\n# ip server\n{ServerIP}\n# delay (ms)\n1000\n";
                 File.WriteAllText(configPath, defaultContent);
             }
             catch
