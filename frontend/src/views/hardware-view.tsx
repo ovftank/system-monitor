@@ -1,35 +1,36 @@
-import { IconArtboard, IconBattery, IconContainerFilled, IconCpu, IconCpu2, IconDeviceImac, IconLayersSubtract, IconNetwork, IconRefresh, IconRuler3, IconSettingsHeart } from '@tabler/icons-react';
+import { IconArtboard, IconBattery, IconClock, IconContainerFilled, IconCpu, IconCpu2, IconDeviceImac, IconLayersSubtract, IconNetwork, IconRefresh, IconRuler3, IconSettingsHeart, IconWifi } from '@tabler/icons-react';
 import { GetMonitorData } from '@wails/go/main/App';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 interface Sensor {
-    name: string;
-    sensorType: string;
-    value: number;
-    unit: string;
+    Name: string;
+    SensorType: string;
+    Value: number;
+    Unit: string;
 }
 
 interface Hardware {
-    name: string;
-    hardwareType: string;
-    sensors: Sensor[];
+    Name: string;
+    HardwareType: string;
+    Sensors: Sensor[];
 }
 
 interface ClientData {
-    hostName: string;
-    localIP: string;
-    hardware: Hardware[];
+    HostName: string;
+    LocalIP: string;
+    Timestamp: number;
+    Hardware: Hardware[];
 }
 
 interface Client {
-    clientId: string;
-    data: ClientData;
+    ClientId: string;
+    Data: ClientData;
 }
 
 interface MonitorResponse {
-    totalClients: number;
-    clients: Client[];
+    TotalClients: number;
+    Clients: Client[];
 }
 
 const HardwareView: FC = () => {
@@ -72,30 +73,56 @@ const HardwareView: FC = () => {
     };
 
     const getHardwareNameByType = (hardware: Hardware[], type: string): string => {
-        const hw = hardware.find((h) => h.hardwareType === type);
-        return hw?.name || '-';
+        const hw = hardware.find((h) => h.HardwareType === type);
+        return hw?.Name || '-';
     };
 
     const getVTValue = (hardware: Hardware[]): string => {
-        const cpu = hardware.find((h) => h.hardwareType === 'Cpu');
+        const cpu = hardware.find((h) => h.HardwareType === 'Cpu');
         if (!cpu) return '-';
-        const vtSensor = cpu.sensors.find((s) => s.name === 'VT-x Enabled');
-        return vtSensor ? (vtSensor.value === 1 ? 'Đã Bật' : 'Đã Tắt') : '-';
+        const vtSensor = cpu.Sensors.find((s) => s.Name === 'VT-x Enabled');
+        return vtSensor ? (vtSensor.Value === 1 ? 'Đã Bật' : 'Đã Tắt') : '-';
     };
 
     const getGPUNames = (hardware: Hardware[]): string => {
-        const gpus = hardware.filter((h) => h.hardwareType.includes('Gpu'));
-        return gpus.length > 0 ? gpus.map((g) => g.name).join(', ') : '-';
+        const gpus = hardware.filter((h) => h.HardwareType.includes('Gpu'));
+        return gpus.length > 0 ? gpus.map((g) => g.Name).join(', ') : '-';
     };
 
     const getRamTotal = (hardware: Hardware[]): string => {
-        const memory = hardware.find((h) => h.hardwareType === 'Memory');
+        const memory = hardware.find((h) => h.HardwareType === 'Memory');
         if (!memory) return '-';
-        const usedSensor = memory.sensors.find((s) => s.name === 'Memory Used');
-        const availableSensor = memory.sensors.find((s) => s.name === 'Memory Available');
+        const usedSensor = memory.Sensors.find((s) => s.Name === 'Memory Used');
+        const availableSensor = memory.Sensors.find((s) => s.Name === 'Memory Available');
         if (!usedSensor || !availableSensor) return '-';
-        const total = usedSensor.value + availableSensor.value;
-        return `${total.toFixed(2)} ${usedSensor.unit}`;
+        const total = usedSensor.Value + availableSensor.Value;
+        return `${total.toFixed(2)} ${usedSensor.Unit}`;
+    };
+
+    const isClientOnline = (timestamp: number): boolean => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - timestamp;
+        return diff <= 10;
+    };
+
+    const getRamSpeed = (hardware: Hardware[]): string => {
+        const memory = hardware.find((h) => h.HardwareType === 'Memory');
+        if (!memory) return '-';
+        const speedSensor = memory.Sensors.find((s) => s.Name === 'Memory Speed' && s.SensorType === 'Clock');
+        return speedSensor ? `${speedSensor.Value.toFixed(0)} ${speedSensor.Unit}` : '-';
+    };
+
+    const getLanSpeed = (hardware: Hardware[]): string => {
+        const networks = hardware.filter((h) => h.HardwareType === 'Network');
+        if (networks.length === 0) return '-';
+
+        for (const network of networks) {
+            const linkSpeedSensor = network.Sensors.find((s) => s.Name === 'Link Speed' && s.SensorType === 'Data');
+            if (linkSpeedSensor && linkSpeedSensor.Value > 0) {
+                return `${linkSpeedSensor.Value.toFixed(0)} ${linkSpeedSensor.Unit}`;
+            }
+        }
+        return '-';
     };
 
     return (
@@ -114,7 +141,7 @@ const HardwareView: FC = () => {
             </div>
 
             {error && <div className='mb-4 rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700'>{error}</div>}
-            {data && data.clients.length > 0 ? (
+            {data && data.Clients.length > 0 ? (
                 <div className='flex-1 overflow-auto'>
                     <table className='w-full border-collapse text-xs'>
                         <thead className='sticky top-0 border-b border-stone-200 bg-stone-50'>
@@ -157,6 +184,18 @@ const HardwareView: FC = () => {
                                 </th>
                                 <th className='px-4 py-2 text-center font-semibold text-stone-700'>
                                     <span className='flex items-center justify-center gap-2'>
+                                        <IconClock size={16} />
+                                        RAM Speed
+                                    </span>
+                                </th>
+                                <th className='px-4 py-2 text-center font-semibold text-stone-700'>
+                                    <span className='flex items-center justify-center gap-2'>
+                                        <IconWifi size={16} />
+                                        LAN Speed
+                                    </span>
+                                </th>
+                                <th className='px-4 py-2 text-center font-semibold text-stone-700'>
+                                    <span className='flex items-center justify-center gap-2'>
                                         <IconLayersSubtract size={16} />
                                         VT-x
                                     </span>
@@ -164,17 +203,27 @@ const HardwareView: FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {data.clients.map((client) => (
-                                <tr key={client.clientId} className='border-b border-stone-200 hover:bg-stone-50'>
-                                    <td className='px-4 py-2 font-medium text-stone-900'>{client.data.hostName}</td>
-                                    <td className='px-4 py-2 text-stone-700'>{client.data.localIP}</td>
-                                    <td className='px-4 py-2 text-stone-900'>{getHardwareNameByType(client.data.hardware, 'Motherboard')}</td>
-                                    <td className='px-4 py-2 text-stone-900'>{getHardwareNameByType(client.data.hardware, 'Cpu')}</td>
-                                    <td className='px-4 py-2 text-stone-900'>{getGPUNames(client.data.hardware)}</td>
-                                    <td className='px-4 py-2 text-stone-900'>{getRamTotal(client.data.hardware)}</td>
-                                    <td className='px-4 py-2 text-center font-medium text-stone-700'>{getVTValue(client.data.hardware)}</td>
-                                </tr>
-                            ))}
+                            {data.Clients.sort((a, b) => a.Data.HostName.localeCompare(b.Data.HostName)).map((client) => {
+                                const isOnline = isClientOnline(client.Data.Timestamp);
+                                return (
+                                    <tr key={client.ClientId} className='border-b border-stone-200 hover:bg-stone-50'>
+                                        <td className='px-4 py-2 font-medium text-stone-900'>
+                                            <div className='flex items-center gap-2'>
+                                                <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-stone-400'}`} title={isOnline ? 'Online' : 'Offline'}></div>
+                                                {client.Data.HostName}
+                                            </div>
+                                        </td>
+                                        <td className='px-4 py-2 text-stone-700'>{client.Data.LocalIP}</td>
+                                        <td className='px-4 py-2 text-stone-900'>{getHardwareNameByType(client.Data.Hardware, 'Motherboard')}</td>
+                                        <td className='px-4 py-2 text-stone-900'>{getHardwareNameByType(client.Data.Hardware, 'Cpu')}</td>
+                                        <td className='px-4 py-2 text-stone-900'>{getGPUNames(client.Data.Hardware)}</td>
+                                        <td className='px-4 py-2 text-stone-900'>{getRamTotal(client.Data.Hardware)}</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{getRamSpeed(client.Data.Hardware)}</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{getLanSpeed(client.Data.Hardware)}</td>
+                                        <td className='px-4 py-2 text-center font-medium text-stone-700'>{getVTValue(client.Data.Hardware)}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -186,3 +235,4 @@ const HardwareView: FC = () => {
 };
 
 export default HardwareView;
+

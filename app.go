@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -16,33 +18,37 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+//go:embed wails.json
+var wailsJSON string
+
 type Sensor struct {
-	Name       string  `json:"name"`
-	SensorType string  `json:"sensorType"`
-	Value      float64 `json:"value"`
-	Unit       string  `json:"unit"`
+	Name       string  `json:"Name"`
+	SensorType string  `json:"SensorType"`
+	Value      float64 `json:"Value"`
+	Unit       string  `json:"Unit"`
 }
 
 type Hardware struct {
-	Name         string   `json:"name"`
-	HardwareType string   `json:"hardwareType"`
-	Sensors      []Sensor `json:"sensors"`
+	Name         string   `json:"Name"`
+	HardwareType string   `json:"HardwareType"`
+	Sensors      []Sensor `json:"Sensors"`
 }
 
 type ClientData struct {
-	HostName string     `json:"hostName"`
-	LocalIP  string     `json:"localIP"`
-	Hardware []Hardware `json:"hardware"`
+	HostName  string     `json:"HostName"`
+	LocalIP   string     `json:"LocalIP"`
+	Timestamp int64      `json:"Timestamp"`
+	Hardware  []Hardware `json:"Hardware"`
 }
 
 type Client struct {
-	ClientId string     `json:"clientId"`
-	Data     ClientData `json:"data"`
+	ClientId string     `json:"ClientId"`
+	Data     ClientData `json:"Data"`
 }
 
 type MonitorResponse struct {
-	TotalClients int      `json:"totalClients"`
-	Clients      []Client `json:"clients"`
+	TotalClients int      `json:"TotalClients"`
+	Clients      []Client `json:"Clients"`
 }
 
 type Config struct {
@@ -51,24 +57,45 @@ type Config struct {
 }
 
 type AuthResponse struct {
-	Status    string `json:"status"`
-	Token     string `json:"token"`
-	ExpiresAt int64  `json:"expires_at"`
-	Message   string `json:"message"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    string `json:"data,omitempty"`
 }
 
 type RegisterResponse struct {
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-	AccountID int    `json:"account_id"`
-	Username  string `json:"username"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 type CheckTokenResponse struct {
-	Status        string `json:"status"`
-	AccountStatus int    `json:"account_status"`
-	LicenseExpire int64  `json:"license_expire"`
-	Message       string `json:"message"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+}
+
+type WailsConfig struct {
+	Info struct {
+		CompanyName    string `json:"companyName"`
+		ProductName    string `json:"productName"`
+		ProductVersion string `json:"productVersion"`
+		Copyright      string `json:"copyright"`
+		Comments       string `json:"comments"`
+	} `json:"info"`
+}
+
+type AppInfo struct {
+	CompanyName    string `json:"companyName"`
+	ProductName    string `json:"productName"`
+	ProductVersion string `json:"productVersion"`
+	Copyright      string `json:"copyright"`
+	Comments       string `json:"comments"`
+}
+
+type UpdateCheckResult struct {
+	HasUpdate  bool   `json:"hasUpdate"`
+	NewVersion string `json:"newVersion"`
+	Error      string `json:"error,omitempty"`
 }
 
 type App struct {
@@ -237,27 +264,39 @@ func (a *App) Register(username, password string) *RegisterResponse {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil
+		return &RegisterResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	resp, err := a.client.Post(
-		"https://tool.superpc.vn/api/auth/register",
+		"https://tool.superpc.vn/api/app/register",
 		"application/json",
 		strings.NewReader(string(body)),
 	)
 	if err != nil {
-		return nil
+		return &RegisterResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return &RegisterResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	var regResp RegisterResponse
 	if err := json.Unmarshal(respBody, &regResp); err != nil {
-		return nil
+		return &RegisterResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	return &regResp
@@ -274,35 +313,39 @@ func (a *App) Login(username, password string) *AuthResponse {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil
+		return &AuthResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	resp, err := a.client.Post(
-		"https://tool.superpc.vn/api/auth/login",
+		"https://tool.superpc.vn/api/app/login",
 		"application/json",
 		strings.NewReader(string(body)),
 	)
 	if err != nil {
-		return nil
+		return &AuthResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return nil
-	}
-
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return &AuthResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	var authResp AuthResponse
 	if err := json.Unmarshal(respBody, &authResp); err != nil {
-		return nil
-	}
-
-	if authResp.Token == "" {
-		return nil
+		return &AuthResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	return &authResp
@@ -310,7 +353,10 @@ func (a *App) Login(username, password string) *AuthResponse {
 
 func (a *App) CheckToken(token string) *CheckTokenResponse {
 	if token == "" {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Token không hợp lệ",
+		}
 	}
 
 	payload := map[string]string{
@@ -319,38 +365,185 @@ func (a *App) CheckToken(token string) *CheckTokenResponse {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
-	req, err := http.NewRequest("POST", "https://tool.superpc.vn/api/auth/status", strings.NewReader(string(body)))
+	req, err := http.NewRequest("POST", "https://tool.superpc.vn/api/app/verify-token", strings.NewReader(string(body)))
 	if err != nil {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return nil
-	}
-
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	var checkResp CheckTokenResponse
 	if err := json.Unmarshal(respBody, &checkResp); err != nil {
-		return nil
-	}
-
-	if checkResp.Status != "success" || checkResp.AccountStatus != 1 {
-		return nil
+		return &CheckTokenResponse{
+			Success: false,
+			Message: "Lỗi không xác định",
+		}
 	}
 
 	return &checkResp
+}
+
+func (a *App) OpenBrowser(url string) {
+	runtime.BrowserOpenURL(a.ctx, url)
+}
+
+func (a *App) GetAppVersion() string {
+	var config WailsConfig
+	if err := json.Unmarshal([]byte(wailsJSON), &config); err != nil {
+		return ""
+	}
+	return config.Info.ProductVersion
+}
+
+func (a *App) GetAppInfo() *AppInfo {
+	var config WailsConfig
+	if err := json.Unmarshal([]byte(wailsJSON), &config); err != nil {
+		return nil
+	}
+	return &AppInfo{
+		CompanyName:    config.Info.CompanyName,
+		ProductName:    config.Info.ProductName,
+		ProductVersion: config.Info.ProductVersion,
+		Copyright:      config.Info.Copyright,
+		Comments:       config.Info.Comments,
+	}
+}
+
+const (
+	remoteConfigURL = "https://raw.githubusercontent.com/ovftank/system-monitor/refs/heads/view/wails.json"
+	downloadURL     = "https://github.com/ovftank/system-monitor/releases/download/v%s/system-monitor-amd64-installer.exe"
+)
+
+func (a *App) CheckForUpdates() *UpdateCheckResult {
+	currentVersion := a.GetAppVersion()
+
+	resp, err := http.Get(remoteConfigURL)
+	if err != nil {
+		return &UpdateCheckResult{
+			HasUpdate:  false,
+			NewVersion: currentVersion,
+			Error:      fmt.Sprintf("failed to fetch remote config: %v", err),
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return &UpdateCheckResult{
+			HasUpdate:  false,
+			NewVersion: currentVersion,
+			Error:      fmt.Sprintf("remote config returned status: %d", resp.StatusCode),
+		}
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &UpdateCheckResult{
+			HasUpdate:  false,
+			NewVersion: currentVersion,
+			Error:      fmt.Sprintf("failed to read remote config: %v", err),
+		}
+	}
+
+	var remoteConfig WailsConfig
+	if err := json.Unmarshal(body, &remoteConfig); err != nil {
+		return &UpdateCheckResult{
+			HasUpdate:  false,
+			NewVersion: currentVersion,
+			Error:      fmt.Sprintf("failed to parse remote config: %v", err),
+		}
+	}
+
+	if remoteConfig.Info.ProductVersion != currentVersion {
+		return &UpdateCheckResult{
+			HasUpdate:  true,
+			NewVersion: remoteConfig.Info.ProductVersion,
+		}
+	}
+
+	return &UpdateCheckResult{
+		HasUpdate:  false,
+		NewVersion: currentVersion,
+	}
+}
+
+func (a *App) DownloadUpdate(version string) (string, error) {
+	url := fmt.Sprintf(downloadURL, version)
+
+	tempDir := os.TempDir()
+	setupPath := filepath.Join(tempDir, fmt.Sprintf("system-monitor-update-%s.exe", version))
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to download update: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
+	}
+
+	file, err := os.Create(setupPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create update file: %v", err)
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		os.Remove(setupPath)
+		return "", fmt.Errorf("failed to save update file: %v", err)
+	}
+
+	return setupPath, nil
+}
+
+func (a *App) InstallUpdate(setupPath string) error {
+	batchPath := filepath.Join(os.TempDir(), "system-monitor-update.bat")
+
+	batchContent := fmt.Sprintf(`@echo off
+echo Starting update process...
+timeout /t 2 /nobreak >nul
+"%s" /S
+echo Update completed
+del "%s"
+del "%%~f0"
+`, setupPath, batchPath)
+
+	if err := os.WriteFile(batchPath, []byte(batchContent), 0644); err != nil {
+		return fmt.Errorf("failed to create update script: %v", err)
+	}
+
+	cmd := exec.Command("cmd", "/c", batchPath)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start update script: %v", err)
+	}
+
+	runtime.Quit(a.ctx)
+
+	return nil
 }

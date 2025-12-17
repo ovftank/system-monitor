@@ -1,36 +1,37 @@
-import { IconActivity, IconBolt, IconCpu, IconCpu2, IconDeviceImac, IconDownload, IconNetwork, IconRefresh, IconThermometer, IconUpload, IconWind } from '@tabler/icons-react';
+import { IconActivity, IconBolt, IconCpu, IconCpu2, IconDeviceImac, IconDownload, IconRefresh, IconThermometer, IconUpload, IconWind } from '@tabler/icons-react';
 import { GetMonitorData } from '@wails/go/main/App';
 import { EventsOn } from '@wails/runtime/runtime';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 
 interface Sensor {
-    name: string;
-    sensorType: string;
-    value: number;
-    unit: string;
+    Name: string;
+    SensorType: string;
+    Value: number;
+    Unit: string;
 }
 
 interface Hardware {
-    name: string;
-    hardwareType: string;
-    sensors: Sensor[];
+    Name: string;
+    HardwareType: string;
+    Sensors: Sensor[];
 }
 
 interface ClientData {
-    hostName: string;
-    localIP: string;
-    hardware: Hardware[];
+    HostName: string;
+    LocalIP: string;
+    Timestamp: number;
+    Hardware: Hardware[];
 }
 
 interface Client {
-    clientId: string;
-    data: ClientData;
+    ClientId: string;
+    Data: ClientData;
 }
 
 interface MonitorResponse {
-    totalClients: number;
-    clients: Client[];
+    TotalClients: number;
+    Clients: Client[];
 }
 
 const ActivityView: FC = () => {
@@ -64,56 +65,78 @@ const ActivityView: FC = () => {
     }, []);
 
     const getCPUMetrics = (hardware: Hardware[]) => {
-        const cpu = hardware.find((h) => h.hardwareType === 'Cpu');
+        const cpu = hardware.find((h) => h.HardwareType === 'Cpu');
         if (!cpu) return { load: 0, temp: 0, clock: 0, power: 0, fan: 0 };
-        const load = cpu.sensors.find((s) => s.name === 'CPU Total' && s.sensorType === 'Load');
-        const temp = cpu.sensors.find((s) => s.name === 'Core Max' && s.sensorType === 'Temperature');
-        const clock = cpu.sensors.find((s) => s.name === 'CPU Core #1' && s.sensorType === 'Clock');
-        const power = cpu.sensors.find((s) => s.name === 'CPU Package' && s.sensorType === 'Power');
-        const fan = cpu.sensors.find((s) => (s.name === 'CPU Fan' || s.name === 'CPU Optional Fan' || s.name.startsWith('CPU Fan #')) && s.sensorType === 'Fan');
+
+        const load = cpu.Sensors.find((s) => s.Name === 'CPU Usage' && s.SensorType === 'Load');
+        const temp = cpu.Sensors.find((s) => s.Name === 'CPU Temperature' && s.SensorType === 'Temperature');
+        const clock = cpu.Sensors.find((s) => s.Name === 'CPU Clock' && s.SensorType === 'Clock');
+        const power = cpu.Sensors.find((s) => s.Name === 'CPU Power' && s.SensorType === 'Power');
+        const fan = cpu.Sensors.find((s) => s.SensorType === 'Fan');
+
         return {
-            load: load?.value || 0,
-            temp: temp?.value || 0,
-            clock: clock?.value || 0,
-            power: power?.value || 0,
-            fan: fan?.value || 0
+            load: load?.Value || 0,
+            temp: temp?.Value || 0,
+            clock: clock?.Value || 0,
+            power: power?.Value || 0,
+            fan: fan?.Value || 0
         };
     };
 
     const getGPUMetrics = (hardware: Hardware[]) => {
-        const gpus = hardware.filter((h) => h.hardwareType.includes('Gpu'));
-        if (gpus.length === 0) return { load: 0, temp: 0, clock: 0, power: 0, fan: 0 };
+        const gpus = hardware.filter((h) => h.HardwareType.includes('Gpu'));
+        if (gpus.length === 0) return { load: 0, temp: 0, clock: 0, power: 0, fan: 0, hasLoad: false, hasTemp: false, hasClock: false, hasPower: false, hasFan: false };
 
         let maxLoad = 0;
         let maxTemp = 0;
         let maxClock = 0;
         let maxPower = 0;
         let maxFan = 0;
+        let hasLoad = false;
+        let hasTemp = false;
+        let hasClock = false;
+        let hasPower = false;
+        let hasFan = false;
 
         gpus.forEach((gpu) => {
-            const d3dLoad = gpu.sensors.find((s) => s.name === 'D3D 3D' && s.sensorType === 'Load');
-            if (d3dLoad && d3dLoad.value > maxLoad) {
-                maxLoad = d3dLoad.value;
+            const gpuLoad = gpu.Sensors.find((s) => s.Name === 'GPU Usage' && s.SensorType === 'Load');
+            if (gpuLoad) {
+                hasLoad = true;
+                if (gpuLoad.Value > maxLoad) {
+                    maxLoad = gpuLoad.Value;
+                }
             }
 
-            const temp = gpu.sensors.find((s) => s.name === 'GPU Core' && s.sensorType === 'Temperature');
-            if (temp && temp.value > 0 && temp.value > maxTemp) {
-                maxTemp = temp.value;
+            const temp = gpu.Sensors.find((s) => s.Name === 'GPU Temperature' && s.SensorType === 'Temperature');
+            if (temp && temp.Value > 0) {
+                hasTemp = true;
+                if (temp.Value > maxTemp) {
+                    maxTemp = temp.Value;
+                }
             }
 
-            const clock = gpu.sensors.find((s) => s.name === 'GPU Core' && s.sensorType === 'Clock');
-            if (clock && clock.value > maxClock) {
-                maxClock = clock.value;
+            const clock = gpu.Sensors.find((s) => s.Name === 'GPU Clock' && s.SensorType === 'Clock');
+            if (clock) {
+                hasClock = true;
+                if (clock.Value > maxClock) {
+                    maxClock = clock.Value;
+                }
             }
 
-            const power = gpu.sensors.find((s) => s.name === 'GPU Power' && s.sensorType === 'Power');
-            if (power && power.value > maxPower) {
-                maxPower = power.value;
+            const power = gpu.Sensors.find((s) => s.Name === 'GPU Power' && s.SensorType === 'Power');
+            if (power) {
+                hasPower = true;
+                if (power.Value > maxPower) {
+                    maxPower = power.Value;
+                }
             }
 
-            const fan = gpu.sensors.find((s) => s.name === 'GPU Fan' && s.sensorType === 'Fan');
-            if (fan && fan.value > maxFan) {
-                maxFan = fan.value;
+            const fan = gpu.Sensors.find((s) => s.SensorType === 'Fan' && s.Name === 'GPU Fan');
+            if (fan) {
+                hasFan = true;
+                if (fan.Value > maxFan) {
+                    maxFan = fan.Value;
+                }
             }
         });
 
@@ -122,36 +145,41 @@ const ActivityView: FC = () => {
             temp: maxTemp,
             clock: maxClock,
             power: maxPower,
-            fan: maxFan
+            fan: maxFan,
+            hasLoad,
+            hasTemp,
+            hasClock,
+            hasPower,
+            hasFan
         };
     };
 
     const getRAMMetrics = (hardware: Hardware[]) => {
-        const mem = hardware.find((h) => h.hardwareType === 'Memory');
+        const mem = hardware.find((h) => h.HardwareType === 'Memory');
         if (!mem) return { used: 0, total: 0, percentage: 0 };
-        const used = mem.sensors.find((s) => s.name === 'Memory Used');
-        const available = mem.sensors.find((s) => s.name === 'Memory Available');
-        const percentage = mem.sensors.find((s) => s.name === 'Memory' && s.sensorType === 'Load');
-        const usedValue = used?.value || 0;
-        const availableValue = available?.value || 0;
+        const used = mem.Sensors.find((s) => s.Name === 'Memory Used');
+        const available = mem.Sensors.find((s) => s.Name === 'Memory Available');
+        const percentage = mem.Sensors.find((s) => s.Name === 'Memory' && s.SensorType === 'Load');
+        const usedValue = used?.Value || 0;
+        const availableValue = available?.Value || 0;
         const total = usedValue + availableValue;
         return {
             used: usedValue,
             total: total,
-            percentage: percentage?.value || 0
+            percentage: percentage?.Value || 0
         };
     };
 
     const getNetworkMetrics = (hardware: Hardware[]) => {
-        const networks = hardware.filter((h) => h.hardwareType === 'Network');
+        const networks = hardware.filter((h) => h.HardwareType === 'Network');
         if (networks.length === 0) return { upload: 0, download: 0 };
         let totalUp = 0;
         let totalDown = 0;
         networks.forEach((net) => {
-            const up = net.sensors.find((s) => s.name === 'Upload Speed');
-            const down = net.sensors.find((s) => s.name === 'Download Speed');
-            totalUp += up?.value || 0;
-            totalDown += down?.value || 0;
+            const up = net.Sensors.find((s) => s.Name === 'Upload Speed' && s.SensorType === 'Throughput');
+            const down = net.Sensors.find((s) => s.Name === 'Download Speed' && s.SensorType === 'Throughput');
+            totalUp += up?.Value || 0;
+            totalDown += down?.Value || 0;
         });
         return { upload: totalUp, download: totalDown };
     };
@@ -178,6 +206,12 @@ const ActivityView: FC = () => {
         return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
     };
 
+    const isClientOnline = (timestamp: number): boolean => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - timestamp;
+        return diff <= 10;
+    };
+
     return (
         <div className='flex h-full flex-col bg-white p-4'>
             <div className='mb-4 flex items-center justify-between'>
@@ -186,6 +220,11 @@ const ActivityView: FC = () => {
                     Hoạt động
                 </p>
                 <div className='flex items-center gap-2'>
+                    {data && (
+                        <span className='text-sm font-medium text-stone-700'>
+                            Tổng số máy: {data.Clients.filter((client) => isClientOnline(client.Data.Timestamp)).length}/{data.TotalClients}
+                        </span>
+                    )}
                     <button onClick={fetchData} disabled={loading} className='rounded p-1.5 transition-colors hover:bg-stone-100 disabled:opacity-50' title='Làm mới'>
                         <IconRefresh size={18} />
                     </button>
@@ -194,7 +233,7 @@ const ActivityView: FC = () => {
             </div>
 
             {error && <div className='mb-4 rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700'>{error}</div>}
-            {data && data.clients.length > 0 ? (
+            {data && data.Clients.length > 0 ? (
                 <div className='flex-1 overflow-auto'>
                     <table className='w-full border-collapse text-xs'>
                         <thead className='sticky top-0 border-b border-stone-200 bg-stone-50'>
@@ -203,12 +242,6 @@ const ActivityView: FC = () => {
                                     <span className='flex items-center gap-2'>
                                         <IconDeviceImac size={16} />
                                         Máy
-                                    </span>
-                                </th>
-                                <th className='px-4 py-2 text-left font-semibold text-stone-700'>
-                                    <span className='flex items-center gap-2'>
-                                        <IconNetwork size={16} />
-                                        IP
                                     </span>
                                 </th>
                                 <th className='px-4 py-2 text-center font-semibold text-stone-700'>
@@ -292,26 +325,31 @@ const ActivityView: FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {data.clients.map((client) => {
-                                const cpuMetrics = getCPUMetrics(client.data.hardware);
-                                const gpuMetrics = getGPUMetrics(client.data.hardware);
-                                const ramMetrics = getRAMMetrics(client.data.hardware);
-                                const networkMetrics = getNetworkMetrics(client.data.hardware);
+                            {data.Clients.toSorted((a, b) => a.Data.HostName.localeCompare(b.Data.HostName)).map((client) => {
+                                const cpuMetrics = getCPUMetrics(client.Data.Hardware);
+                                const gpuMetrics = getGPUMetrics(client.Data.Hardware);
+                                const ramMetrics = getRAMMetrics(client.Data.Hardware);
+                                const networkMetrics = getNetworkMetrics(client.Data.Hardware);
+                                const isOnline = isClientOnline(client.Data.Timestamp);
 
                                 return (
-                                    <tr key={client.clientId} className='border-b border-stone-200 hover:bg-stone-50'>
-                                        <td className='px-4 py-2 font-medium text-stone-900'>{client.data.hostName}</td>
-                                        <td className='px-4 py-2 text-stone-700'>{client.data.localIP}</td>
+                                    <tr key={client.ClientId} className='border-b border-stone-200 hover:bg-stone-50'>
+                                        <td className='px-4 py-2 font-medium text-stone-900'>
+                                            <div className='flex items-center gap-2'>
+                                                <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-stone-400'}`} title={isOnline ? 'Online' : 'Offline'}></div>
+                                                {client.Data.HostName}
+                                            </div>
+                                        </td>
                                         <td className={`px-4 py-2 text-center font-medium ${getStatusColor(cpuMetrics.load, 'load')}`}>{cpuMetrics.load.toFixed(1)}%</td>
                                         <td className={`px-4 py-2 text-center font-medium ${getStatusColor(cpuMetrics.temp, 'temp')}`}>{cpuMetrics.temp.toFixed(0)}°C</td>
                                         <td className='px-4 py-2 text-center text-stone-700'>{cpuMetrics.clock.toFixed(0)} MHz</td>
                                         <td className='px-4 py-2 text-center text-stone-700'>{cpuMetrics.power.toFixed(2)} W</td>
-                                        <td className='px-4 py-2 text-center text-stone-700'>{cpuMetrics.fan.toFixed(0)} RPM</td>
-                                        <td className={`px-4 py-2 text-center font-medium ${getStatusColor(gpuMetrics.load, 'load')}`}>{gpuMetrics.load.toFixed(1)}%</td>
-                                        <td className={`px-4 py-2 text-center font-medium ${getStatusColor(gpuMetrics.temp, 'temp')}`}>{gpuMetrics.temp.toFixed(0)}°C</td>
-                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.clock.toFixed(0)} MHz</td>
-                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.power.toFixed(2)} W</td>
-                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.fan.toFixed(0)} RPM</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{cpuMetrics.fan > 0 ? `${cpuMetrics.fan.toFixed(0)} RPM` : '-'}</td>
+                                        <td className={`px-4 py-2 text-center font-medium ${gpuMetrics.hasLoad ? getStatusColor(gpuMetrics.load, 'load') : 'text-stone-400'}`}>{gpuMetrics.hasLoad ? `${gpuMetrics.load.toFixed(1)}%` : '-'}</td>
+                                        <td className={`px-4 py-2 text-center font-medium ${gpuMetrics.hasTemp ? getStatusColor(gpuMetrics.temp, 'temp') : 'text-stone-400'}`}>{gpuMetrics.hasTemp ? `${gpuMetrics.temp.toFixed(0)}°C` : '-'}</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.hasClock ? `${gpuMetrics.clock.toFixed(0)} MHz` : <span className='text-stone-400'>-</span>}</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.hasPower ? `${gpuMetrics.power.toFixed(2)} W` : <span className='text-stone-400'>-</span>}</td>
+                                        <td className='px-4 py-2 text-center text-stone-700'>{gpuMetrics.hasFan ? `${gpuMetrics.fan.toFixed(0)} RPM` : <span className='text-stone-400'>-</span>}</td>
                                         <td className='px-4 py-2 text-center'>
                                             <span className='font-medium text-stone-700'>{ramMetrics.used.toFixed(1)}</span>
                                             <span className='text-stone-600'> / {ramMetrics.total.toFixed(1)} GB</span>
@@ -332,3 +370,4 @@ const ActivityView: FC = () => {
 };
 
 export default ActivityView;
+

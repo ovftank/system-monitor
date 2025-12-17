@@ -1,14 +1,15 @@
 import logo from '@/assets/images/logo.png';
-import { IconMinus, IconX } from '@tabler/icons-react';
+import { IconHelp, IconMinus, IconX } from '@tabler/icons-react';
 import { Quit, WindowMinimise } from '@wails/runtime/runtime';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 
 interface HeaderProps {
     licenseExpire?: number | null;
+    onShowCredit?: () => void;
 }
 
-const Header: FC<HeaderProps> = ({ licenseExpire }) => {
+const Header: FC<HeaderProps> = ({ licenseExpire, onShowCredit }) => {
     const [countdownText, setCountdownText] = useState<string>('');
 
     useEffect(() => {
@@ -46,6 +47,9 @@ const Header: FC<HeaderProps> = ({ licenseExpire }) => {
                 {countdownText && <span className='ml-4 text-sm text-stone-600'>Bản quyền: {countdownText}</span>}
             </div>
             <div className='flex gap-2' style={{ '--wails-draggable': 'no-drag' } as any}>
+                <button onClick={onShowCredit} className='rounded px-3 py-1 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900' title='Credits'>
+                    <IconHelp size={16} />
+                </button>
                 <button onClick={() => WindowMinimise()} className='rounded px-3 py-1 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900' title='Minimize'>
                     <IconMinus size={16} />
                 </button>

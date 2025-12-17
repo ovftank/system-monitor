@@ -35,16 +35,24 @@ const RegisterTab: FC = () => {
 
         try {
             const response = await Register(username.trim(), password);
-            if (response?.status === 'success') {
+
+            if (response?.success) {
                 setSuccess(response.message);
                 setUsername('');
                 setPassword('');
                 setPasswordConfirm('');
+                return;
+            }
+
+            if (response?.message) {
+                setError(response.message);
+            } else if (response === null || response === undefined) {
+                setError('Lỗi không xác định');
             } else {
-                setError(response?.message || 'Đăng ký thất bại');
+                setError('Lỗi không xác định');
             }
         } catch {
-            setError('Đăng ký thất bại');
+            setError('Lỗi không xác định');
         } finally {
             setLoading(false);
         }
@@ -58,26 +66,26 @@ const RegisterTab: FC = () => {
 
     return (
         <div className='space-y-4'>
-            {error && <p className='text-sm text-red-600'>{error}</p>}
-            {success && <p className='text-sm whitespace-pre-line text-green-600'>{success}</p>}
+            {error && <div className='rounded border border-crimson-200 bg-crimson-50 p-2 text-xs text-crimson-700'>{error}</div>}
+            {success && <div className='rounded border border-green-200 bg-green-50 p-2 text-xs text-green-700 whitespace-pre-line'>{success}</div>}
             <div className='space-y-3'>
                 <div>
                     <p className='mb-1.5 text-xs font-medium text-stone-700'>Tên đăng nhập</p>
-                    <input type='text' value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Nhập tên đăng nhập' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-stone-50' />
+                    <input type='text' value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Nhập tên đăng nhập' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:bg-stone-50' />
                 </div>
 
                 <div>
                     <p className='mb-1.5 text-xs font-medium text-stone-700'>Mật khẩu</p>
-                    <input type='password' value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Nhập mật khẩu' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-stone-50' />
+                    <input type='password' value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Nhập mật khẩu' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:bg-stone-50' />
                 </div>
 
                 <div>
                     <p className='mb-1.5 text-xs font-medium text-stone-700'>Xác nhận mật khẩu</p>
-                    <input type='password' value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Xác nhận mật khẩu' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-stone-50' />
+                    <input type='password' value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder='Xác nhận mật khẩu' className='focus:ring-crimson-600 focus:border-crimson-600 w-full rounded border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:ring-1 focus:outline-none disabled:bg-stone-50' />
                 </div>
             </div>
 
-            <button onClick={handleRegister} disabled={loading} className='bg-crimson-600 hover:bg-crimson-700 disabled:bg-crimson-400 w-full rounded px-3 py-2 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed'>
+            <button onClick={handleRegister} disabled={loading} className='bg-crimson-600 disabled:bg-crimson-400 w-full rounded px-3 py-2 text-sm font-medium text-white'>
                 {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>
         </div>

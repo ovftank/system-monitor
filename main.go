@@ -17,8 +17,8 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:                    "System Monitor",
-		Width:                    1280,
-		Height:                   720,
+		Width:                    1600,
+		Height:                   900,
 		Frameless:                true,
 		CSSDragProperty:          "--wails-draggable",
 		CSSDragValue:             "drag",

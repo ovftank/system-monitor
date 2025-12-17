@@ -22,6 +22,23 @@
     --color-stone-700: #44403c;
     --color-stone-800: #292524;
     --color-stone-900: #1c1917;
+
+    --animate-marquee: marquee 40s linear infinite;
+
+    @keyframes marquee {
+        0% {
+            transform: translateX(100%);
+        }
+        100% {
+            transform: translateX(-100%);
+        }
+    }
+}
+
+@layer components {
+    .marquee-pause:hover .animate-marquee {
+        animation-play-state: paused;
+    }
 }
 
 @layer base {

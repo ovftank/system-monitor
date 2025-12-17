@@ -10,19 +10,19 @@
 	"frontend:dev:serverUrl": "auto",
 	"frontend:dev:watcher": "pnpm vite",
 	"frontend:install": "pnpm install",
-	"garbleargs": "-literals -tiny -seed=random",
-	"info": {
-		"comments": "https://ovfteam.com",
+		"info": {
+		"comments": " Developed by ovfank",
 		"companyName": "ovfteam",
-		"copyright": "Copyright © 2025 ovfteam",
+		"copyright": "Copyright © 2025 SuperPC",
 		"productName": "System Monitor",
-		"productVersion": "0.0.1"
+		"productVersion": "1.0.0"
 	},
 	"name": "system-monitor",
 	"nsisType": "single",
-	"obfuscated": true,
+	"obfuscated": false,
 	"outputfilename": "system-monitor",
 	"windows": {
 		"webview2": "embed"
 	}
 }
+
