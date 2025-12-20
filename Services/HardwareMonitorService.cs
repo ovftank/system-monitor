@@ -1,4 +1,4 @@
-using System.Management;
+using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -529,28 +529,33 @@ namespace superpc.Services
 
             try
             {
-                using (var searcher = new ManagementObjectSearcher("SELECT VirtualizationFirmwareEnabled FROM Win32_Processor"))
-                using (var collection = searcher.Get())
+                using var powerShell = new Process();
+                powerShell.StartInfo = new ProcessStartInfo
                 {
-                    foreach (ManagementBaseObject obj in collection)
-                    {
-                        var vtEnabled = obj["VirtualizationFirmwareEnabled"];
-                        if (vtEnabled != null)
-                        {
-                            _vtCachedStatus = (bool)vtEnabled;
-                            return _vtCachedStatus.Value;
-                        }
-                    }
-                }
+                    FileName = "powershell.exe",
+                    Arguments = "-Command \"(Get-CimInstance Win32_Processor).VirtualizationFirmwareEnabled\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    Verb = "runas"
+                };
 
-                _vtCachedStatus = false;
+                powerShell.Start();
+                string output = powerShell.StandardOutput.ReadToEnd().Trim();
+                powerShell.WaitForExit();
+
+                if (bool.TryParse(output, out bool vtEnabled))
+                {
+                    _vtCachedStatus = vtEnabled;
+                    return vtEnabled;
+                }
             }
             catch
             {
                 _vtCachedStatus = false;
             }
 
-            return _vtCachedStatus.Value;
+            return _vtCachedStatus ?? false;
         }
 
         private static string GetLanIP()
