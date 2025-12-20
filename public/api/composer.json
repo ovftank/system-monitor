@@ -1,0 +1,25 @@
+{
+    "name": "app/system-monitor-api",
+    "description": "System Monitor API",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "firebase/php-jwt": "7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\Api\\": "Api/",
+            "App\\Config\\": "config/",
+            "App\\Controllers\\": "controllers/",
+            "App\\Services\\": "services/"
+        }
+    },
+    "authors": [
+        {
+            "name": "ovftank",
+            "email": "ovftank@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
