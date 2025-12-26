@@ -2,16 +2,30 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using LibreHardwareMonitor.Hardware;
 
 namespace superpc.Services
 {
-    public class HardwareMonitorService : IDisposable
+    public partial class HardwareMonitorService : IDisposable
     {
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetFirmwareType(ref uint firmwareType);
+
+        private enum FirmwareType : uint
+        {
+            FirmwareTypeUnknown = 0,
+            FirmwareTypeBios = 1,
+            FirmwareTypeUefi = 2,
+            FirmwareTypeMax = 3
+        }
+
         private readonly Computer _computer;
         private bool _disposed = false;
         private bool? _vtCachedStatus = null;
+        private string? _cachedFirmwareType = null;
         private static readonly string _cachedHostName = GetHostName();
         private static readonly string _cachedLocalIP = GetLanIP();
 
@@ -39,6 +53,8 @@ namespace superpc.Services
             var hardwareInfoList = new List<HardwareInfo>();
             _computer.Accept(new UpdateVisitor());
 
+            var cpuFanSpeed = GetCpuFanSpeed();
+
             foreach (IHardware hardware in _computer.Hardware)
             {
                 if (hardware.HardwareType == HardwareType.Network && !IsPhysicalNetworkAdapter(hardware))
@@ -46,7 +62,7 @@ namespace superpc.Services
                     continue;
                 }
 
-                var hardwareInfo = CreateHardwareInfo(hardware);
+                var hardwareInfo = CreateHardwareInfo(hardware, cpuFanSpeed);
                 hardwareInfoList.Add(hardwareInfo);
             }
 
@@ -59,7 +75,23 @@ namespace superpc.Services
             };
         }
 
-        private HardwareInfo CreateHardwareInfo(IHardware hardware)
+        private double? GetCpuFanSpeed()
+        {
+            var motherboard = _computer.Hardware
+                .FirstOrDefault(h => h.HardwareType == HardwareType.Motherboard);
+
+            if (motherboard == null) return null;
+
+            var cpuFans = motherboard.Sensors
+                .Where(s => s.SensorType == SensorType.Fan && s.Value.HasValue &&
+                           s.Name.Contains("CPU Fan", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value!.Value)
+                .ToList();
+
+            return cpuFans.Count > 0 ? Math.Round(cpuFans.Average(), 2) : null;
+        }
+
+        private HardwareInfo CreateHardwareInfo(IHardware hardware, double? cpuFanSpeed)
         {
             var hardwareInfo = new HardwareInfo
             {
@@ -72,6 +104,7 @@ namespace superpc.Services
             {
                 AddAveragedCpuSensors(hardwareInfo, hardware.Sensors);
                 AddVTStatusIfNeeded(hardwareInfo, hardware);
+                AddCpuFanIfNeeded(hardwareInfo, cpuFanSpeed);
             }
             else if (hardware.HardwareType == HardwareType.GpuNvidia ||
                      hardware.HardwareType == HardwareType.GpuAmd ||
@@ -231,7 +264,13 @@ namespace superpc.Services
 
             var powers = sensorsList
                 .Where(s => s.SensorType == SensorType.Power && s.Value.HasValue &&
-                           s.Name.Contains("GPU Power", StringComparison.OrdinalIgnoreCase))
+                           (s.Name.Contains("GPU Package", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU Power", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU Board Power", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU PPT", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU SoC", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("GPU Total", StringComparison.OrdinalIgnoreCase)))
                 .Select(s => s.Value!.Value)
                 .ToList();
 
@@ -324,6 +363,28 @@ namespace superpc.Services
                 Value = IsVTEnabled() ? 1 : 0,
                 Unit = ""
             });
+
+            hardwareInfo.Sensors.Add(new SensorInfo
+            {
+                Name = "Firmware Mode",
+                SensorType = "Firmware",
+                Value = GetFirmwareModeValue(),
+                Unit = ""
+            });
+        }
+
+        private static void AddCpuFanIfNeeded(HardwareInfo hardwareInfo, double? cpuFanSpeed)
+        {
+            if (cpuFanSpeed.HasValue)
+            {
+                hardwareInfo.Sensors.Add(new SensorInfo
+                {
+                    Name = "CPU Fan",
+                    SensorType = "Fan",
+                    Value = cpuFanSpeed.Value,
+                    Unit = "RPM"
+                });
+            }
         }
 
         private void AddMemorySpeedIfNeeded(HardwareInfo hardwareInfo, IHardware hardware)
@@ -556,6 +617,46 @@ namespace superpc.Services
             }
 
             return _vtCachedStatus ?? false;
+        }
+
+        private int GetFirmwareModeValue()
+        {
+            return GetFirmwareMode() switch
+            {
+                "UEFI" => 1,
+                "Legacy" => 0,
+                _ => -1
+            };
+        }
+
+        private string GetFirmwareMode()
+        {
+            if (!string.IsNullOrEmpty(_cachedFirmwareType))
+            {
+                return _cachedFirmwareType;
+            }
+
+            try
+            {
+                uint firmwareType = 0;
+                if (GetFirmwareType(ref firmwareType))
+                {
+                    _cachedFirmwareType = firmwareType switch
+                    {
+                        (uint)FirmwareType.FirmwareTypeUefi => "UEFI",
+                        (uint)FirmwareType.FirmwareTypeBios => "Legacy",
+                        _ => "Unknown"
+                    };
+                    return _cachedFirmwareType;
+                }
+            }
+            catch
+            {
+                // con-meo-bu
+            }
+
+            _cachedFirmwareType = "Unknown";
+            return _cachedFirmwareType;
         }
 
         private static string GetLanIP()
