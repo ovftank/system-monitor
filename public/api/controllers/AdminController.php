@@ -311,4 +311,106 @@ class AdminController
 
         return $result;
     }
+
+    public function createAccount(string $username, string $password, int $licenseExpire): array
+    {
+        $result = [
+            'success' => false,
+            'message' => '',
+            'data' => null
+        ];
+
+        try {
+            if (empty($username) || empty($password)) {
+                $result['message'] = 'Username và mật khẩu không được để trống';
+                return $result;
+            }
+
+            $stmt = $this->db->query("SELECT id FROM accounts WHERE username = ?", [$username]);
+            $existingUser = $stmt->fetch();
+
+            if ($existingUser) {
+                $result['message'] = 'Username đã tồn tại';
+                return $result;
+            }
+
+            $insertStmt = $this->db->query(
+                "INSERT INTO accounts (username, password, hwid, status, license_expire) VALUES (?, ?, NULL, 1, ?)",
+                [$username, $password, $licenseExpire]
+            );
+
+            if ($insertStmt->rowCount() > 0) {
+                $newUserId = (int)$this->db->query("SELECT LAST_INSERT_ID() as id")->fetch()['id'];
+                $result['success'] = true;
+                $result['message'] = 'Đã tạo tài khoản thành công';
+                $result['data'] = [
+                    'user_id' => $newUserId,
+                    'username' => $username
+                ];
+            } else {
+                $result['message'] = 'Lỗi không xác định';
+            }
+        } catch (PDOException $e) {
+            error_log("Create account PDO error: " . $e->getMessage());
+            $result['message'] = 'Lỗi không xác định';
+        } catch (Exception $e) {
+            error_log("Create account error: " . $e->getMessage());
+            $result['message'] = 'Lỗi không xác định';
+        }
+
+        return $result;
+    }
+
+    public function updateAccount(int $userId, string $username, string $password): array
+    {
+        $result = [
+            'success' => false,
+            'message' => '',
+            'data' => null
+        ];
+
+        try {
+            if (empty($username) || empty($password)) {
+                $result['message'] = 'Username và mật khẩu không được để trống';
+            } else {
+                $stmt = $this->db->query("SELECT id FROM accounts WHERE id = ?", [$userId]);
+                $user = $stmt->fetch();
+
+                if (!$user) {
+                    $result['message'] = 'Tài khoản không tồn tại';
+                } else {
+                    $checkStmt = $this->db->query("SELECT id FROM accounts WHERE username = ? AND id != ?", [$username, $userId]);
+                    $existingUser = $checkStmt->fetch();
+
+                    if ($existingUser) {
+                        $result['message'] = 'Username đã tồn tại';
+                    } else {
+                        $updateStmt = $this->db->query(
+                            "UPDATE accounts SET username = ?, password = ? WHERE id = ?",
+                            [$username, $password, $userId]
+                        );
+
+                        if ($updateStmt->rowCount() > 0) {
+                            $result['success'] = true;
+                            $result['message'] = 'Đã cập nhật tài khoản';
+                            $result['data'] = [
+                                'user_id' => $userId,
+                                'username' => $username
+                            ];
+                        } else {
+                            $result['message'] = 'Lỗi không xác định';
+                        }
+                    }
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("Update account PDO error: " . $e->getMessage());
+            $result['message'] = 'Lỗi không xác định';
+        } catch (Exception $e) {
+            error_log("Update account error: " . $e->getMessage());
+            $result['message'] = 'Lỗi không xác định';
+        }
+
+        return $result;
+    }
 }

@@ -1,10 +1,11 @@
 import ChangePasswordModal from '@/components/change-password-modal';
+import CreateAccountModal from '@/components/create-account-modal';
+import EditAccountModal from '@/components/edit-account-modal';
 import LicenseExpirePicker from '@/components/license-expire-picker';
-import Search from '@/components/search';
 import ToggleButton from '@/components/toggle-button';
 import API_ENDPOINTS from '@/const/api-endpoint';
 import { useAuthStore } from '@/stores/authStore';
-import { faKey, faRefresh, faRightFromBracket, faSort, faSortDown, faSortUp, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faKey, faPlus, faRefresh, faRightFromBracket, faSearch, faSort, faSortDown, faSortUp, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -39,9 +40,17 @@ const Dashboard: FC = () => {
     const [changePasswordModal, setChangePasswordModal] = useState<{ isOpen: boolean }>({
         isOpen: false
     });
+    const [createAccountModal, setCreateAccountModal] = useState<{ isOpen: boolean }>({
+        isOpen: false
+    });
+    const [editAccountModal, setEditAccountModal] = useState<{ isOpen: boolean; user: User | null }>({
+        isOpen: false,
+        user: null
+    });
     const statusHeaderRef = useRef<HTMLTableCellElement>(null);
     const toggleButtonRef = useRef<HTMLButtonElement>(null);
-    const actionButtonRef = useRef<HTMLButtonElement>(null);
+    const editButtonRef = useRef<HTMLButtonElement>(null);
+    const deleteButtonRef = useRef<HTMLButtonElement>(null);
 
     const handleStatusChange = (userId: number, newStatus: number) => {
         setUsers((prevUsers) => prevUsers.map((user) => (user.id === userId ? { ...user, status: newStatus } : user)));
@@ -161,6 +170,40 @@ const Dashboard: FC = () => {
         });
     };
 
+    const handleOpenCreateAccountModal = () => {
+        setCreateAccountModal({
+            isOpen: true
+        });
+    };
+
+    const handleCloseCreateAccountModal = () => {
+        setCreateAccountModal({
+            isOpen: false
+        });
+    };
+
+    const handleAccountCreated = (newUser: User) => {
+        setUsers((prevUsers) => [newUser, ...prevUsers]);
+    };
+
+    const handleOpenEditAccountModal = (user: User) => {
+        setEditAccountModal({
+            isOpen: true,
+            user
+        });
+    };
+
+    const handleCloseEditAccountModal = () => {
+        setEditAccountModal({
+            isOpen: false,
+            user: null
+        });
+    };
+
+    const handleAccountUpdated = (updatedUser: User) => {
+        setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)));
+    };
+
     const handleLogout = () => {
         logout();
     };
@@ -183,10 +226,12 @@ const Dashboard: FC = () => {
 
     useEffect(() => {
         const updateStatusColumnWidth = () => {
-            if (toggleButtonRef.current && actionButtonRef.current && statusHeaderRef.current) {
+            if (toggleButtonRef.current && editButtonRef.current && deleteButtonRef.current && statusHeaderRef.current) {
                 const toggleWidth = toggleButtonRef.current.offsetWidth;
-                const actionWidth = actionButtonRef.current.offsetWidth;
-                const calculatedWidth = Math.max(toggleWidth, actionWidth) + 60;
+                const editWidth = editButtonRef.current.offsetWidth;
+                const deleteWidth = deleteButtonRef.current.offsetWidth;
+                const gap = 8; // gap-2 = 0.5rem = 8px, có 2 gaps giữa 3 buttons
+                const calculatedWidth = toggleWidth + editWidth + deleteWidth + gap * 2 + 32; // 32 = padding (px-4)
                 setStatusColumnWidth(`${calculatedWidth}px`);
             }
         };
@@ -277,8 +322,11 @@ const Dashboard: FC = () => {
                 <button ref={toggleButtonRef} className='relative inline-flex h-6 w-11 items-center rounded-full bg-stone-600'>
                     <span className='inline-block h-4 w-4 translate-x-6 transform rounded-full bg-white' />
                 </button>
-                <button ref={actionButtonRef} className='rounded p-2'>
-                    <FontAwesomeIcon icon={faTrash} className='h-4 w-4' />
+                <button ref={editButtonRef} className='rounded p-1.5'>
+                    <FontAwesomeIcon icon={faEdit} className='h-3.5 w-3.5' />
+                </button>
+                <button ref={deleteButtonRef} className='rounded p-1.5'>
+                    <FontAwesomeIcon icon={faTrash} className='h-3.5 w-3.5' />
                 </button>
             </div>
 
@@ -288,7 +336,7 @@ const Dashboard: FC = () => {
                         <p className='font-medium text-stone-700'>Tổng số: {users.length} người dùng</p>
                     </div>
                     <div className='flex items-center gap-2'>
-                        <button onClick={handleOpenChangePasswordModal} className='flex items-center gap-2 rounded-lg bg-stone-600 px-4 py-2 text-white transition-colors hover:bg-stone-700 focus:ring-2 focus:ring-stone-500 focus:ring-offset-2 focus:outline-none' title='Đổi mật khẩu'>
+                        <button onClick={handleOpenChangePasswordModal} className='flex items-center gap-2 rounded-lg bg-stone-600 px-4 py-2 text-white transition-colors hover:bg-stone-700 focus:ring-2 focus:ring-stone-500 focus:ring-offset-2 focus:outline-none' title='Đổi mk'>
                             <FontAwesomeIcon icon={faKey} className='h-4 w-4' />
                             <span>Đổi MK</span>
                         </button>
@@ -299,7 +347,17 @@ const Dashboard: FC = () => {
                     </div>
                 </div>
 
-                <Search onSearch={handleSearch} />
+                <div className='flex items-center gap-3 rounded-lg border border-stone-200 bg-stone-100 px-4 py-3'>
+                    <div className='flex items-center gap-2 text-stone-600'>
+                        <FontAwesomeIcon icon={faSearch} className='h-4 w-4' />
+                        <p className='text-sm font-medium'>Tìm kiếm:</p>
+                    </div>
+                    <input type='text' value={searchTerm} onChange={(e) => handleSearch(e.target.value)} placeholder='Tìm kiếm theo User, HWID...' className='flex-1 rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 focus:border-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none' />
+                    <button onClick={handleOpenCreateAccountModal} className='rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 transition-colors hover:bg-stone-50 focus:border-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none' title='Tạo tài khoản mới'>
+                        <FontAwesomeIcon icon={faPlus} className='h-4 w-4' />
+                        <span className='ml-1'>Tạo TK</span>
+                    </button>
+                </div>
                 <div className='relative flex-1 overflow-y-auto rounded-lg border border-stone-200'>
                     <table className='w-full border-collapse rounded-lg'>
                         <thead>
@@ -351,7 +409,10 @@ const Dashboard: FC = () => {
                                     <td className='border border-stone-300 px-4 py-3' style={{ width: statusColumnWidth }}>
                                         <div className='flex items-center justify-center gap-2'>
                                             <ToggleButton userId={user.id} currentStatus={user.status} onStatusChange={handleStatusChange} />
-                                            <button onClick={() => handleDeleteAccount(user.id, user.username)} className='rounded p-1.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-600' title='Xóa tài khoản'>
+                                            <button onClick={() => handleOpenEditAccountModal(user)} className='rounded p-1.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-600' title='Edit info'>
+                                                <FontAwesomeIcon icon={faEdit} className='h-3.5 w-3.5' />
+                                            </button>
+                                            <button onClick={() => handleDeleteAccount(user.id, user.username)} className='rounded p-1.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-600' title='Xóa'>
                                                 <FontAwesomeIcon icon={faTrash} className='h-3.5 w-3.5' />
                                             </button>
                                         </div>
@@ -364,6 +425,8 @@ const Dashboard: FC = () => {
             </div>
 
             <ChangePasswordModal isOpen={changePasswordModal.isOpen} onClose={handleCloseChangePasswordModal} />
+            <CreateAccountModal isOpen={createAccountModal.isOpen} onClose={handleCloseCreateAccountModal} onAccountCreated={handleAccountCreated} />
+            <EditAccountModal isOpen={editAccountModal.isOpen} user={editAccountModal.user} onClose={handleCloseEditAccountModal} onAccountUpdated={handleAccountUpdated} />
         </main>
     );
 };

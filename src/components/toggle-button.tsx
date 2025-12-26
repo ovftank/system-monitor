@@ -55,12 +55,12 @@ const ToggleButton: FC<ToggleButtonProps> = ({ userId, currentStatus, onStatusCh
     const isActive = optimisticStatus === 1;
 
     return (
-        <button onClick={handleToggle} disabled={loading} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 ease-out focus:ring-2 focus:ring-stone-500 focus:ring-offset-2 focus:outline-none ${isActive ? 'bg-stone-600' : 'bg-stone-300'} ${loading ? 'scale-95 opacity-70' : ''} transform`}>
-            <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-all duration-300 ease-out ${isActive ? 'translate-x-5' : 'translate-x-1'} ${loading ? 'scale-90 animate-pulse' : ''} `} />
+        <button onClick={handleToggle} disabled={loading} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ease-out focus:ring-2 focus:ring-stone-500 focus:ring-offset-2 focus:outline-none ${isActive ? 'bg-stone-600' : 'bg-stone-300'} ${loading ? 'scale-95 opacity-70' : ''} transform`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-all duration-300 ease-out ${isActive ? 'translate-x-6' : 'translate-x-1'} ${loading ? 'scale-90 animate-pulse' : ''} `} />
 
             {loading && (
                 <div className='absolute inset-0 flex items-center justify-center'>
-                    <div className='h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400' />
+                    <div className='h-2 w-2 animate-bounce rounded-full bg-stone-400' />
                 </div>
             )}
         </button>

@@ -211,6 +211,50 @@ try {
             } else {
                 ApiResponse::error($result['message']);
             }
+        } elseif ($action === 'create-account') {
+            if ($method !== 'POST') {
+                ApiResponse::error('Không hợp lệ', 405);
+                exit;
+            }
+
+            verifyAdminJwtToken($adminAuth);
+
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if (!isset($input['username']) || !isset($input['password']) || !isset($input['license_expire'])) {
+                ApiResponse::error('Không hợp lệ');
+                exit;
+            }
+
+            $result = $adminAuth->createAccount($input['username'], $input['password'], (int)$input['license_expire']);
+
+            if ($result['success']) {
+                ApiResponse::success($result['message'], $result['data']);
+            } else {
+                ApiResponse::error($result['message']);
+            }
+        } elseif ($action === 'update-account') {
+            if ($method !== 'POST') {
+                ApiResponse::error('Không hợp lệ', 405);
+                exit;
+            }
+
+            verifyAdminJwtToken($adminAuth);
+
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if (!isset($input['user_id']) || !is_numeric($input['user_id']) || !isset($input['username']) || !isset($input['password'])) {
+                ApiResponse::error('Không hợp lệ');
+                exit;
+            }
+
+            $result = $adminAuth->updateAccount((int)$input['user_id'], $input['username'], $input['password']);
+
+            if ($result['success']) {
+                ApiResponse::success($result['message'], $result['data']);
+            } else {
+                ApiResponse::error($result['message']);
+            }
         } else {
             ApiResponse::error('Không hợp lệ', 404);
         }

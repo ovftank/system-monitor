@@ -9,7 +9,9 @@ const API_ENDPOINTS = {
         TOGGLE_STATUS: '/api/admin/toggle-account-status',
         UPDATE_LICENSE_EXPIRE: '/api/admin/update-license-expire',
         RESET_HWID: '/api/admin/reset-hwid',
-        DELETE_ACCOUNT: '/api/admin/delete-account'
+        DELETE_ACCOUNT: '/api/admin/delete-account',
+        CREATE_ACCOUNT: '/api/admin/create-account',
+        UPDATE_ACCOUNT: '/api/admin/update-account'
     }
 } as const;
 export default API_ENDPOINTS;

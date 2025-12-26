@@ -60,7 +60,7 @@ const ChangePasswordModal: FC<ChangePasswordModalProps> = ({ isOpen, onClose }) 
 
     return (
         <div className='fixed inset-0 z-50 flex items-center justify-center'>
-            <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' onClick={onClose} />
+            <div className='absolute inset-0 bg-stone-900/50 backdrop-blur-sm' onClick={onClose} />
             <div className='relative mx-4 w-full max-w-md rounded-lg border border-stone-300 bg-white p-4 shadow-xl'>
                 <div className='mb-4'>
                     <p className='text-lg font-medium text-stone-900'>Đổi mật khẩu</p>
