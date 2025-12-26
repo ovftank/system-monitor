@@ -1,4 +1,4 @@
-import ovfteamLogo from '@/assets/images/ovfteam-logo.png';
+import logo from '@/assets/images/logo.png';
 import { IconDownload, IconLoader2, IconX } from '@tabler/icons-react';
 import { CheckForUpdates, DownloadUpdate, GetAppInfo, InstallUpdate, OpenBrowser } from '@wails/go/main/App';
 import type { FC } from 'react';
@@ -13,7 +13,6 @@ interface AppInfo {
     productName: string;
     productVersion: string;
     copyright: string;
-    comments: string;
 }
 
 const CreditModal: FC<CreditModalProps> = ({ onClose }) => {
@@ -91,7 +90,7 @@ const CreditModal: FC<CreditModalProps> = ({ onClose }) => {
 
                 <div className='space-y-4 px-5 py-5'>
                     <div className='flex items-center justify-center'>
-                        <img src={ovfteamLogo} alt='ovfteam' className='h-16 w-auto' />
+                        <img src={logo} alt='' className='h-16 w-auto' />
                     </div>
 
                     <div className='text-center'>
@@ -99,6 +98,16 @@ const CreditModal: FC<CreditModalProps> = ({ onClose }) => {
                             <p className='text-base font-semibold text-stone-900'>{appInfo?.productName || 'System Monitor'}</p>
                             {appInfo?.productVersion && <p className='text-xs text-stone-500'>v{appInfo.productVersion}</p>}
                         </div>
+                        {appInfo?.companyName && (
+                            <button
+                                className='text-sm text-stone-600'
+                                onClick={() => {
+                                    OpenBrowser('https://superpc.vn/');
+                                }}
+                            >
+                                {appInfo.companyName}
+                            </button>
+                        )}
                     </div>
 
                     <div className='space-y-3 border-t border-stone-200 pt-4'>
@@ -121,7 +130,7 @@ const CreditModal: FC<CreditModalProps> = ({ onClose }) => {
                             )}
 
                             {updateAvailable && !isDownloading && !isInstalling && (
-                                <button onClick={downloadAndInstall} className='flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50' disabled={isDownloading || isInstalling}>
+                                <button onClick={downloadAndInstall} className='flex w-full items-center justify-center gap-2 rounded-md bg-stone-800 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-900 disabled:opacity-50' disabled={isDownloading || isInstalling}>
                                     <IconDownload size={16} />
                                     Cập nhật lên v{newVersion}
                                 </button>
@@ -129,24 +138,10 @@ const CreditModal: FC<CreditModalProps> = ({ onClose }) => {
 
                             {updateMessage && (
                                 <div className='text-center'>
-                                    <p className={`text-sm ${updateAvailable && !updateMessage.includes('thất bại') ? 'text-blue-600' : 'text-stone-600'}`}>{updateMessage}</p>
+                                    <p className={`text-sm ${updateAvailable && !updateMessage.includes('thất bại') ? 'font-medium text-stone-800' : 'text-stone-600'}`}>{updateMessage}</p>
                                 </div>
                             )}
                         </div>
-
-                        {appInfo?.comments && (
-                            <div className='text-center'>
-                                <p className='text-sm text-stone-700'>
-                                    <button
-                                        onClick={() => {
-                                            OpenBrowser('https://ovfteam.com/');
-                                        }}
-                                    >
-                                        {appInfo.comments}
-                                    </button>
-                                </p>
-                            </div>
-                        )}
                         <div className='text-center'>
                             <p className='text-xs text-stone-500'>{appInfo?.copyright || 'Copyright © SuperPC'}</p>
                         </div>

@@ -370,4 +370,3 @@ const ActivityView: FC = () => {
 };
 
 export default ActivityView;
-

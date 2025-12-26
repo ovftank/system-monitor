@@ -85,12 +85,12 @@ const SettingModal: FC<SettingModalProps> = ({ onClose }) => {
                     {loading ? (
                         <div className='space-y-4'>
                             <div className='animate-pulse'>
-                                <div className='text-xs font-medium text-stone-700 mb-1'>IP máy chủ</div>
-                                <div className='h-8 bg-stone-200 rounded'></div>
+                                <div className='mb-1 text-xs font-medium text-stone-700'>IP máy chủ</div>
+                                <div className='h-8 rounded bg-stone-200'></div>
                             </div>
                             <div className='animate-pulse'>
-                                <div className='text-xs font-medium text-stone-700 mb-1'>Refresh Delay (ms)</div>
-                                <div className='h-8 bg-stone-200 rounded'></div>
+                                <div className='mb-1 text-xs font-medium text-stone-700'>Refresh Delay (ms)</div>
+                                <div className='h-8 rounded bg-stone-200'></div>
                             </div>
                         </div>
                     ) : (

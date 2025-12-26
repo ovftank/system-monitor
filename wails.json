@@ -10,12 +10,12 @@
 	"frontend:dev:serverUrl": "auto",
 	"frontend:dev:watcher": "pnpm vite",
 	"frontend:install": "pnpm install",
-		"info": {
-		"comments": " Developed by ovfank",
-		"companyName": "ovfteam",
+	"info": {
+		"comments": "Developed by ovfteam",
+		"companyName": "SUPER PC CO, LTD",
 		"copyright": "Copyright © 2025 SuperPC",
 		"productName": "System Monitor",
-		"productVersion": "1.0.0"
+		"productVersion": "1.0.1"
 	},
 	"name": "system-monitor",
 	"nsisType": "single",

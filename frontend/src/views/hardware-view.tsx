@@ -1,4 +1,4 @@
-import { IconArtboard, IconBattery, IconClock, IconContainerFilled, IconCpu, IconCpu2, IconDeviceImac, IconLayersSubtract, IconNetwork, IconRefresh, IconRuler3, IconSettingsHeart, IconWifi } from '@tabler/icons-react';
+import { IconArtboard, IconBattery, IconClock, IconContainerFilled, IconCpu, IconCpu2, IconDeviceImac, IconLayersSubtract, IconNetwork, IconPower, IconRefresh, IconRuler3, IconSettingsHeart, IconWifi } from '@tabler/icons-react';
 import { GetMonitorData } from '@wails/go/main/App';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -125,6 +125,14 @@ const HardwareView: FC = () => {
         return '-';
     };
 
+    const getBootMode = (hardware: Hardware[]): string => {
+        const cpu = hardware.find((h) => h.HardwareType === 'Cpu');
+        if (!cpu) return '-';
+        const firmwareSensor = cpu.Sensors.find((s) => s.Name === 'Firmware Mode' && s.SensorType === 'Firmware');
+        if (!firmwareSensor) return '-';
+        return firmwareSensor.Value === 1 ? 'UEFI' : firmwareSensor.Value === 0 ? 'Legacy' : 'Unknown';
+    };
+
     return (
         <div className='flex h-full flex-col bg-white p-4'>
             <div className='mb-4 flex items-center justify-between'>
@@ -200,10 +208,16 @@ const HardwareView: FC = () => {
                                         VT-x
                                     </span>
                                 </th>
+                                <th className='px-4 py-2 text-center font-semibold text-stone-700'>
+                                    <span className='flex items-center justify-center gap-2'>
+                                        <IconPower size={16} />
+                                        Boot
+                                    </span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            {data.Clients.sort((a, b) => a.Data.HostName.localeCompare(b.Data.HostName)).map((client) => {
+                            {data.Clients.toSorted((a, b) => a.Data.HostName.localeCompare(b.Data.HostName)).map((client) => {
                                 const isOnline = isClientOnline(client.Data.Timestamp);
                                 return (
                                     <tr key={client.ClientId} className='border-b border-stone-200 hover:bg-stone-50'>
@@ -221,6 +235,7 @@ const HardwareView: FC = () => {
                                         <td className='px-4 py-2 text-center text-stone-700'>{getRamSpeed(client.Data.Hardware)}</td>
                                         <td className='px-4 py-2 text-center text-stone-700'>{getLanSpeed(client.Data.Hardware)}</td>
                                         <td className='px-4 py-2 text-center font-medium text-stone-700'>{getVTValue(client.Data.Hardware)}</td>
+                                        <td className='px-4 py-2 text-center font-medium text-stone-700'>{getBootMode(client.Data.Hardware)}</td>
                                     </tr>
                                 );
                             })}
@@ -235,4 +250,3 @@ const HardwareView: FC = () => {
 };
 
 export default HardwareView;
-

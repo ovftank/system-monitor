@@ -8,7 +8,7 @@
     !define INFO_PROJECTNAME "system-monitor"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "ovfteam"
+    !define INFO_COMPANYNAME "SUPER PC CO, LTD"
 !endif
 !ifndef INFO_PRODUCTNAME
     !define INFO_PRODUCTNAME "System Monitor"

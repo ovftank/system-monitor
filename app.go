@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/StackExchange/wmi"
@@ -108,7 +109,7 @@ type App struct {
 func NewApp() *App {
 	return &App{
 		config: LoadConfig(),
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -526,10 +527,8 @@ func (a *App) InstallUpdate(setupPath string) error {
 	batchPath := filepath.Join(os.TempDir(), "system-monitor-update.bat")
 
 	batchContent := fmt.Sprintf(`@echo off
-echo Starting update process...
 timeout /t 2 /nobreak >nul
-"%s" /S
-echo Update completed
+start "" /wait "%s" /S
 del "%s"
 del "%%~f0"
 `, setupPath, batchPath)
@@ -539,6 +538,11 @@ del "%%~f0"
 	}
 
 	cmd := exec.Command("cmd", "/c", batchPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000,
+	}
+
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start update script: %v", err)
 	}

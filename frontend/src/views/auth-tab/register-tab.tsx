@@ -66,8 +66,8 @@ const RegisterTab: FC = () => {
 
     return (
         <div className='space-y-4'>
-            {error && <div className='rounded border border-crimson-200 bg-crimson-50 p-2 text-xs text-crimson-700'>{error}</div>}
-            {success && <div className='rounded border border-green-200 bg-green-50 p-2 text-xs text-green-700 whitespace-pre-line'>{success}</div>}
+            {error && <div className='border-crimson-200 bg-crimson-50 text-crimson-700 rounded border p-2 text-xs'>{error}</div>}
+            {success && <div className='rounded border border-green-200 bg-green-50 p-2 text-xs whitespace-pre-line text-green-700'>{success}</div>}
             <div className='space-y-3'>
                 <div>
                     <p className='mb-1.5 text-xs font-medium text-stone-700'>Tên đăng nhập</p>
