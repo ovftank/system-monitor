@@ -80,6 +80,10 @@ const LicenseExpirePicker: FC<LicenseExpirePickerProps> = ({ userId, currentExpi
                         locale={vi}
                         defaultMonth={selectedDate}
                         disabled={{ before: new Date() }}
+                        captionLayout='dropdown'
+                        hideNavigation
+                        startMonth={new Date()}
+                        endMonth={new Date(new Date().getFullYear() + 10, 11)}
                         modifiersClassNames={{
                             selected: 'bg-stone-600 [&_button]:!text-stone-50 [&_button:hover]:bg-stone-600 rounded-md'
                         }}

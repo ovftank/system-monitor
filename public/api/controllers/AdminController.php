@@ -288,8 +288,8 @@ class AdminController
         ];
 
         try {
-            if (empty($newPassword) || strlen($newPassword) < 6) {
-                $result['message'] = 'Mật khẩu phải có ít nhất 6 ký tự';
+            if (empty($newPassword)) {
+                $result['message'] = 'Mật khẩu không được để trống';
                 return $result;
             }
 

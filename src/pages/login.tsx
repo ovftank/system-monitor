@@ -50,7 +50,6 @@ const Login = () => {
 
     return (
         <div className='flex flex-col items-center space-y-6'>
-            <img src='https://github.com/ovftank.png' alt='' className='h-8 w-8 rounded-full' />
             <form onSubmit={handleSubmit} className='w-80 space-y-4'>
                 <input type='text' ref={usernameRef} placeholder='Tên đăng nhập' className='w-full rounded border border-stone-300 px-3 py-2' disabled={loading} autoFocus required />
                 <input type='password' ref={passwordRef} placeholder='Mật khẩu' className='w-full rounded border border-stone-300 px-3 py-2' disabled={loading} required />

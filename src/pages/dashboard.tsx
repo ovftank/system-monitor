@@ -285,7 +285,6 @@ const Dashboard: FC = () => {
             <div className='flex min-h-0 w-full flex-1 flex-col space-y-6'>
                 <div className='flex items-center justify-between rounded-lg border border-stone-200 bg-stone-100 p-4'>
                     <div className='flex items-center gap-2'>
-                        <img src='https://github.com/ovftank.png' alt='' className='h-5 w-5 rounded-full' />
                         <p className='font-medium text-stone-700'>Tổng số: {users.length} người dùng</p>
                     </div>
                     <div className='flex items-center gap-2'>

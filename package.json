@@ -1,20 +1,4 @@
 {
-    "name": "system-monitor-key",
-    "version": "1.0.0",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "pnpm build:api && pnpm build:frontend",
-        "build:api": "cd public/api && composer update --no-interaction && composer install --no-dev --optimize-autoloader",
-        "build:frontend": "eslint . && rsbuild build",
-        "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:frontend\"",
-        "dev:api": "cd public/api && php -S localhost:8000 -t .",
-        "dev:frontend": "rsbuild dev",
-        "format": "prettier --write .",
-        "lint": "eslint .",
-        "preview": "rsbuild preview",
-        "install:api": "cd public/api && composer install"
-    },
     "dependencies": {
         "@fortawesome/fontawesome-svg-core": "7.1.0",
         "@fortawesome/free-brands-svg-icons": "7.1.0",
@@ -33,6 +17,7 @@
         "@rsbuild/core": "1.6.15",
         "@rsbuild/plugin-react": "1.4.2",
         "@tailwindcss/postcss": "4.1.18",
+        "@types/node": "25.0.3",
         "@types/react": "19.2.7",
         "@types/react-dom": "19.2.3",
         "concurrently": "9.2.1",
@@ -45,7 +30,22 @@
         "prettier-plugin-tailwindcss": "0.7.2",
         "tailwindcss": "4.1.18",
         "typescript": "5.9.3",
-        "typescript-eslint": "8.50.0"
-    }
+        "typescript-eslint": "8.50.1"
+    },
+    "name": "system-monitor-key",
+    "private": true,
+    "scripts": {
+        "build": "pnpm build:api && pnpm build:frontend",
+        "build:api": "cd public/api && composer update --no-interaction && composer install --no-dev --optimize-autoloader",
+        "build:frontend": "eslint . && rsbuild build",
+        "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:frontend\"",
+        "dev:api": "cd public/api && php -S localhost:8000 -t .",
+        "dev:frontend": "rsbuild dev",
+        "format": "prettier --write .",
+        "install:api": "cd public/api && composer install",
+        "lint": "eslint .",
+        "preview": "rsbuild preview"
+    },
+    "type": "module",
+    "version": "1.0.0"
 }
-

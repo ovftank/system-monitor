@@ -24,11 +24,6 @@ const ChangePasswordModal: FC<ChangePasswordModalProps> = ({ isOpen, onClose }) 
             return;
         }
 
-        if (newPassword.length < 6) {
-            toast.error('Mật khẩu phải có ít nhất 6 ký tự');
-            return;
-        }
-
         setLoading(true);
 
         try {

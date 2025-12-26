@@ -1,13 +1,28 @@
-# SuperPC System Monitor Web Server
+# TOOL.SUPERPC.VN
 
-## dev
+- [Project Overview](#project-overview)
+- [Development](#development)
+- [API Documentation](#api-documentation)
+- [Troubleshooting](#troubleshooting)
 
-```bash
-pnpm dev
+### setup php
+
+Install via Chocolatey:
+
+```powershell
+choco install composer -y
+choco install php --version=8.1.34 -y
 ```
 
-## build
+Enable `pdo_mysql` extension:
+
+```powershell
+$ini = (php --ini | Select-String "Loaded Configuration File" | ForEach-Object { ($_ -split ":")[1].Trim() }); (Get-Content $ini) -replace ';extension=pdo_mysql', 'extension=pdo_mysql' | Set-Content $ini
+```
+
+### install dependencies
 
 ```bash
-pnpm build
+pnpm install
+cd public/api && composer install
 ```

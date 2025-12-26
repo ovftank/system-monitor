@@ -37,7 +37,7 @@ class AppController
                 return $result;
             }
 
-            $licenseExpire = time() + (1 * 24 * 60 * 60);
+            $licenseExpire = time() + (3 * 24 * 60 * 60);
             $insertStmt = $this->db->query("INSERT INTO accounts (username, password, hwid, status, license_expire) VALUES (?, ?, ?, 0, ?)", [
                 $username,
                 $password,

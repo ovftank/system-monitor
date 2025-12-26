@@ -12,7 +12,7 @@ class DatabaseConnection
     private static $instance = null;
     private $connection;
 
-    private $host = 'localhost';
+    private $host = '';
     private $username = '';
     private $password = '';
     private $database = '';
@@ -29,8 +29,6 @@ class DatabaseConnection
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => true,
                 PDO::ATTR_TIMEOUT => 30,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$this->charset}",
-                PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
             ];
 
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
