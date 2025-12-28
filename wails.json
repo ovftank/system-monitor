@@ -15,7 +15,7 @@
 		"companyName": "SUPER PC CO, LTD",
 		"copyright": "Copyright © 2025 SuperPC",
 		"productName": "System Monitor",
-		"productVersion": "1.0.1"
+		"productVersion": "1.0.2"
 	},
 	"name": "system-monitor",
 	"nsisType": "single",
